@@ -31,16 +31,28 @@ STRING_ELEMENT_TYPES = {
     'filename': 'Each element is a file system path, using the OS encoding.',
 }
 
-ARG_TRANSFER_MODES = {
+FUNCTION_IN_ARG_TRANSFER_MODES = {
     'none': 'The data is owned by the caller of the function.',
     'container': 'The called function takes ownership of the data container, but not the data inside it.',
     'full': 'The called function takes ownership of the data, and is responsible for freeing it.',
 }
 
-METHOD_ARG_TRANSFER_MODES = {
-    'none': 'The data is owned by the caller of the function.',
+METHOD_IN_ARG_TRANSFER_MODES = {
+    'none': 'The data is owned by the caller of the method.',
     'container': 'The instance takes ownership of the data container, but not the data inside it.',
     'full': 'The instance takes ownership of the data, and is responsible for freeing it.',
+}
+
+FUNCTION_OUT_ARG_TRANSFER_MODES = {
+    'none': 'The data is owned by the function.',
+    'container': 'The caller of the function takes ownership of the data container, but not the data inside it.',
+    'full': 'The caller of the function takes ownership of the data, and is responsible for freeing it.',
+}
+
+METHOD_OUT_ARG_TRANSFER_MODES = {
+    'none': 'The data is owned by the instance.',
+    'container': 'The caller of the method takes ownership of the data container, but not the data inside it.',
+    'full': 'The caller of the method takes ownership of the data, and is responsible for freeing it.',
 }
 
 RETVAL_TRANSFER_MODES = {
@@ -68,6 +80,7 @@ SCOPE_MODES = {
     'call': 'The callback arguments are valid during the call.',
     'notified': 'The callback arguments are valid until the notify function is called.',
     'async': 'The callback arguments are valid until the asynchronous call is completed.',
+    'forever': 'The callback arguments are valid until the process is terminated',
 }
 
 SIGNAL_WHEN = {
@@ -105,6 +118,20 @@ def type_name_to_cname(fqtn, is_pointer=False):
     return "".join(res)
 
 
+def transfer_note(transfer, direction, method=False):
+    if direction in ['out', 'inout']:
+        if method:
+            return METHOD_OUT_ARG_TRANSFER_MODES[transfer]
+        else:
+            return FUNCTION_OUT_ARG_TRANSFER_MODES[transfer]
+    else:
+        if method:
+            return METHOD_IN_ARG_TRANSFER_MODES[transfer]
+        else:
+            return FUNCTION_IN_ARG_TRANSFER_MODES[transfer]
+    return None
+
+
 def gen_index_func(func, namespace, md=None):
     """Generates a dictionary with the callable metadata required by an index template"""
     name = func.name
@@ -119,7 +146,7 @@ def gen_index_func(func, namespace, md=None):
     if func.available_since is not None:
         available_since = func.available_since
     else:
-        available_since = None
+        available_since = namespace.version
     if func.deprecated:
         (version, msg) = func.deprecated_since
         deprecated_since = version
@@ -143,7 +170,7 @@ def gen_index_property(prop, namespace, md=None):
     if prop.available_since is not None:
         available_since = prop.available_since
     else:
-        available_since = None
+        available_since = namespace.version
     if prop.deprecated:
         (version, msg) = prop.deprecated_since
         deprecated_since = version
@@ -166,7 +193,7 @@ def gen_index_signal(signal, namespace, md=None):
     if signal.available_since is not None:
         available_since = signal.available_since
     else:
-        available_since = None
+        available_since = namespace.version
     if signal.deprecated:
         (version, msg) = signal.deprecated_since
         deprecated_since = version
@@ -188,12 +215,14 @@ def gen_index_ancestor(ancestor_type, namespace, config, md=None):
         ns = ancestor_type.namespace or namespace.name
     res = namespace.repository.find_class(ancestor_name, ns)
     if res is not None:
-        ancestor_ns = res[0].name
+        ancestor_ns_name = res[0].name
         ancestor_ctype = res[1].base_ctype
+        ancestor_ns = res[0]
         ancestor = res[1]
     else:
-        ancestor_ns = ancestor_type.namespace or namespace.name
+        ancestor_ns_name = ancestor_type.namespace or namespace.name
         ancestor_ctype = ancestor_type.base_ctype
+        ancestor_ns = None
         ancestor = None
     n_methods = 0
     methods = []
@@ -213,19 +242,19 @@ def gen_index_ancestor(ancestor_type, namespace, config, md=None):
         if n_methods > 0 and n_methods < 24:
             for m in ancestor.methods:
                 if not config.is_hidden(ancestor_name, "method", m.name):
-                    methods.append(gen_index_func(m, namespace, md))
+                    methods.append(gen_index_func(m, ancestor_ns, md))
         for p in ancestor.properties.values():
             if not config.is_hidden(ancestor_name, "property", p.name):
                 n_properties += 1
-                properties.append(gen_index_property(p, namespace, md))
+                properties.append(gen_index_property(p, ancestor_ns, md))
         for s in ancestor.signals.values():
             if not config.is_hidden(ancestor_name, "signal", s.name):
                 n_signals += 1
-                signals.append(gen_index_signal(s, namespace, md))
+                signals.append(gen_index_signal(s, ancestor_ns, md))
     return {
-        "namespace": ancestor_ns,
+        "namespace": ancestor_ns_name,
         "name": ancestor_name,
-        "fqtn": f"{ancestor_ns}.{ancestor_name}",
+        "fqtn": f"{ancestor_ns_name}.{ancestor_name}",
         "type_cname": ancestor_ctype,
         "properties": properties,
         "n_properties": n_properties,
@@ -244,12 +273,14 @@ def gen_index_implements(iface_type, namespace, config, md=None):
         ns = iface_type.namespace or namespace.name
     res = namespace.repository.find_interface(iface_name, ns)
     if res is not None:
-        iface_ns = res[0].name
+        iface_ns_name = res[0].name
         iface_ctype = res[1].base_ctype
+        iface_ns = res[0]
         iface = res[1]
     else:
-        iface_ns = iface_type.namespace or namespace.name
+        iface_ns_name = iface_type.namespace or namespace.name
         iface_ctype = iface_type.base_ctype
+        iface_ns = None
         iface = None
     n_methods = 0
     methods = []
@@ -267,19 +298,19 @@ def gen_index_implements(iface_type, namespace, config, md=None):
         if n_methods > 0 and n_methods < 24:
             for m in iface.methods:
                 if not config.is_hidden(iface_name, "method", m.name):
-                    methods.append(gen_index_func(m, namespace, md))
+                    methods.append(gen_index_func(m, iface_ns, md))
         for p in iface.properties.values():
             if not config.is_hidden(iface_name, "property", p.name):
                 n_properties += 1
-                properties.append(gen_index_property(p, namespace, md))
+                properties.append(gen_index_property(p, iface_ns, md))
         for s in iface.signals.values():
             if not config.is_hidden(iface.name, "signal", s.name):
                 n_signals += 1
-                signals.append(gen_index_signal(s, namespace, md))
+                signals.append(gen_index_signal(s, iface_ns, md))
     return {
-        "namespace": iface_ns,
+        "namespace": iface_ns_name,
         "name": iface_name,
-        "fqtn": f"{iface_ns}.{iface_name}",
+        "fqtn": f"{iface_ns_name}.{iface_name}",
         "type_cname": iface_ctype,
         "properties": properties,
         "n_properties": n_properties,
@@ -344,6 +375,7 @@ class TemplateConstant:
     def __init__(self, namespace, const):
         self.value = const.value
         self.identifier = const.ctype
+        self.type_name = const.target.name
         self.type_cname = const.target.ctype
         self.namespace = namespace.name
         self.name = const.name
@@ -362,7 +394,7 @@ class TemplateConstant:
 
         self.stability = const.stability
         self.attributes = const.attributes
-        self.available_since = const.available_since
+        self.available_since = const.available_since or namespace.version
         if const.deprecated:
             (version, msg) = const.deprecated_since
             self.deprecated_since = {
@@ -377,6 +409,9 @@ class TemplateConstant:
 
     @property
     def c_decl(self):
+        # String constants are unquoted in the GIR
+        if self.type_name in ["utf8", "filename"]:
+            return utils.code_highlight(f'#define {self.identifier} "{self.value}"')
         return utils.code_highlight(f"#define {self.identifier} {self.value}")
 
 
@@ -420,7 +455,7 @@ class TemplateProperty:
             self.description = MISSING_DESCRIPTION
 
         self.stability = prop.stability
-        self.available_since = prop.available_since
+        self.available_since = prop.available_since or namespace.version
         if prop.deprecated:
             (version, msg) = prop.deprecated_since
             self.deprecated_since = {
@@ -512,6 +547,9 @@ class TemplateProperty:
             if link is not None:
                 self.attributes["Getter method"] = link
 
+        if prop.default_value is not None:
+            self.attributes["Default value"] = prop.default_value
+
         if self.is_fundamental:
             self.link = f"<code>{self.type_cname}</code>"
         elif self.is_array or self.is_list:
@@ -576,13 +614,10 @@ class TemplateArgument:
             self.type_cname = argument.target.ctype
             if self.type_cname is None:
                 self.type_cname = type_name_to_cname(argument.target.name, True)
-        self.transfer = argument.transfer or 'none'
-        if isinstance(call, gir.Method):
-            self.transfer_note = METHOD_ARG_TRANSFER_MODES[argument.transfer or 'none']
-        else:
-            self.transfer_note = ARG_TRANSFER_MODES[argument.transfer or 'none']
         self.direction = argument.direction or 'in'
         self.direction_note = DIRECTION_MODES[argument.direction]
+        self.transfer = argument.transfer or 'none'
+        self.transfer_note = transfer_note(self.transfer, self.direction, method=isinstance(call, gir.Method))
         self.optional = argument.optional
         self.nullable = argument.nullable
         self.scope = SCOPE_MODES[argument.scope or 'none']
@@ -765,7 +800,7 @@ class TemplateSignal:
 
         self.stability = signal.stability
         self.attributes = signal.attributes
-        self.available_since = signal.available_since
+        self.available_since = signal.available_since or namespace.version
         if signal.deprecated:
             (version, msg) = signal.deprecated_since
             self.deprecated_since = {
@@ -822,7 +857,7 @@ class TemplateMethod:
             self.return_value = TemplateReturnValue(namespace, method, method.return_value)
 
         self.stability = method.stability
-        self.available_since = method.available_since
+        self.available_since = method.available_since or type_.available_since
         if method.deprecated:
             (version, msg) = method.deprecated_since
             self.deprecated_since = {
@@ -971,7 +1006,7 @@ class TemplateClassMethod:
 
         self.stability = method.stability
         self.attributes = method.attributes
-        self.available_since = method.available_since
+        self.available_since = method.available_since or cls.available_since
         if method.deprecated:
             (version, msg) = method.deprecated_since
             self.deprecated_since = {
@@ -1014,11 +1049,12 @@ class TemplateClassMethod:
 
 
 class TemplateFunction:
-    def __init__(self, namespace, func):
+    def __init__(self, namespace, type_, func):
         self.identifier = func.identifier
         self.name = func.name
         self.namespace = namespace.name
 
+        self.is_type_func = type_ is not None
         self.is_macro = isinstance(func, gir.FunctionMacro)
 
         self.throws = func.throws
@@ -1044,7 +1080,13 @@ class TemplateFunction:
 
         self.stability = func.stability
         self.attributes = func.attributes
-        self.available_since = func.available_since
+        if func.available_since is None:
+            if type_ is None:
+                self.available_since = namespace.version
+            else:
+                self.available_since = type_.available_since
+        else:
+            self.available_since = func.available_since
         if func.deprecated:
             (version, msg) = func.deprecated_since
             self.deprecated_since = {
@@ -1129,7 +1171,7 @@ class TemplateCallback:
 
         self.stability = cb.stability
         self.attributes = cb.attributes
-        self.available_since = cb.available_since
+        self.available_since = cb.available_since or namespace.version
         if cb.deprecated:
             (version, msg) = cb.deprecated_since
             self.deprecated_since = {
@@ -1244,6 +1286,16 @@ class TemplateInterface:
         self.requires_fqtn = f"{self.requires_namespace}.{self.requires_name}"
         log.debug(f"Preqrequisite for {self.fqtn}: {self.requires_fqtn}")
 
+        def prereq_link_fragment(_ns: gir.Namespace, ns: str, name: str) -> str:
+            if _ns.repository.find_class(name, ns) is not None:
+                return "class"
+            elif _ns.repository.find_interface(name, ns) is not None:
+                return "iface"
+            else:
+                log.error(f"Invalid prerequisite type {ns}.{name}")
+
+        self.requires_link_fragment = prereq_link_fragment(namespace, self.requires_namespace, self.requires_name)
+
         self.symbol_prefix = f"{namespace.symbol_prefix[0]}_{interface.symbol_prefix}"
         self.type_cname = interface.base_ctype
 
@@ -1263,7 +1315,7 @@ class TemplateInterface:
 
         self.stability = interface.stability
         self.attributes = interface.attributes
-        self.available_since = interface.available_since
+        self.available_since = interface.available_since or namespace.version
         if interface.deprecated:
             (version, msg) = interface.deprecated_since
             self.deprecated_since = {
@@ -1279,47 +1331,52 @@ class TemplateInterface:
 
         self.class_struct = namespace.find_record(interface.type_struct)
         if self.class_struct is not None:
+            if self.class_struct.doc:
+                self.class_description = utils.preprocess_docs(self.class_struct.doc.content, namespace, md=md)
+            else:
+                self.class_description = MISSING_DESCRIPTION
             self.class_fields = []
-            self.class_methods = []
-
             for field in self.class_struct.fields:
                 if not field.private:
                     self.class_fields.append(TemplateField(namespace, field))
-
+            self.class_methods = []
             for method in self.class_struct.methods:
                 self.class_methods.append(gen_index_func(method, namespace, md))
+        else:
+            self.class_fields = []
+            self.class_methods = []
 
+        self.properties = []
         if len(interface.properties) != 0:
-            self.properties = []
             for pname, prop in interface.properties.items():
                 if not config.is_hidden(interface.name, "property", pname):
                     self.properties.append(gen_index_property(prop, namespace, md))
 
+        self.signals = []
         if len(interface.signals) != 0:
-            self.signals = []
             for sname, signal in interface.signals.items():
                 if not config.is_hidden(interface.name, "signal", sname):
                     self.signals.append(gen_index_signal(signal, namespace, md))
 
+        self.methods = []
         if len(interface.methods) != 0:
-            self.methods = []
             for method in interface.methods:
                 if not config.is_hidden(interface.name, "method", method.name):
                     self.methods.append(gen_index_func(method, namespace, md))
 
+        self.virtual_methods = []
         if len(interface.virtual_methods) != 0:
-            self.virtual_methods = []
             for vfunc in interface.virtual_methods:
                 self.virtual_methods.append(gen_index_func(vfunc, namespace, md))
 
+        self.type_funcs = []
         if len(interface.functions) != 0:
-            self.type_funcs = []
             for func in interface.functions:
                 if not config.is_hidden(interface.name, "function", func.name):
                     self.type_funcs.append(gen_index_func(func, namespace, md))
 
+        self.implementations = []
         if len(interface.implementations) != 0:
-            self.implementations = []
             for impl in interface.implementations:
                 self.implementations.append({
                     'name': impl.name,
@@ -1414,7 +1471,7 @@ class TemplateClass:
 
         self.stability = cls.stability
         self.attributes = cls.attributes
-        self.available_since = cls.available_since
+        self.available_since = cls.available_since or namespace.version
         if cls.deprecated:
             (version, msg) = cls.deprecated_since
             self.deprecated_since = {
@@ -1427,9 +1484,11 @@ class TemplateClass:
         self.introspectable = cls.introspectable
 
         self.fields = []
-        for field in cls.fields:
-            if not field.private:
-                self.fields.append(TemplateField(namespace, field))
+        if len(cls.fields) > 1:
+            # The first field is always the parent instance
+            for field in cls.fields[1:]:
+                if not field.private:
+                    self.fields.append(TemplateField(namespace, field))
 
         self.properties = []
         if len(cls.properties) != 0:
@@ -1457,15 +1516,20 @@ class TemplateClass:
 
         if self.class_struct is not None:
             self.class_ctype = self.class_struct.ctype
+            if self.class_struct.doc:
+                self.class_description = utils.preprocess_docs(self.class_struct.doc.content, namespace, md=md)
+            else:
+                self.class_description = MISSING_DESCRIPTION
             self.class_fields = []
-            self.class_methods = []
-
             for field in self.class_struct.fields:
                 if not field.private:
                     self.class_fields.append(TemplateField(namespace, field))
-
+            self.class_methods = []
             for method in self.class_struct.methods:
                 self.class_methods.append(gen_index_func(method, namespace, md))
+        else:
+            self.class_fields = []
+            self.class_methods = []
 
         self.interfaces = []
         if len(cls.implements) != 0:
@@ -1522,11 +1586,18 @@ class TemplateClass:
     @property
     def c_decl(self):
         if self.abstract:
-            res = [f"abstract class {self.fqtn} : {self.parent_fqtn} {{"]
+            res = [f"abstract class {self.fqtn} : {self.parent_fqtn}"]
         elif self.final:
-            res = [f"final class {self.fqtn} : {self.parent_fqtn} {{"]
+            res = [f"final class {self.fqtn} : {self.parent_fqtn}"]
         else:
-            res = [f"class {self.fqtn} : {self.parent_fqtn} {{"]
+            res = [f"class {self.fqtn} : {self.parent_fqtn}"]
+        n_interfaces = len(self.interfaces)
+        if n_interfaces:
+            ifaces = [x['fqtn'] for x in self.interfaces]
+            ifaces = ", ".join(ifaces)
+            res += [f"  implements {ifaces} {{"]
+        else:
+            res += ["{"]
         n_fields = len(self.fields)
         if n_fields > 0:
             for (idx, field) in enumerate(self.fields):
@@ -1622,7 +1693,7 @@ class TemplateRecord:
 
         self.stability = record.stability
         self.attributes = record.attributes
-        self.available_since = record.available_since
+        self.available_since = record.available_since or namespace.version
         if record.deprecated:
             (version, msg) = record.deprecated_since
             self.deprecated_since = {
@@ -1639,20 +1710,20 @@ class TemplateRecord:
             if not field.private:
                 self.fields.append(TemplateField(namespace, field))
 
+        self.ctors = []
         if len(record.constructors) != 0:
-            self.ctors = []
             for ctor in record.constructors:
                 if not config.is_hidden(record.name, "constructor", ctor.name):
                     self.ctors.append(gen_index_func(ctor, namespace, md))
 
+        self.methods = []
         if len(record.methods) != 0:
-            self.methods = []
             for method in record.methods:
                 if not config.is_hidden(record.name, "method", method.name):
                     self.methods.append(gen_index_func(method, namespace, md))
 
+        self.type_funcs = []
         if len(record.functions) != 0:
-            self.type_funcs = []
             for func in record.functions:
                 if not config.is_hidden(record.name, "function", func.name):
                     self.type_funcs.append(gen_index_func(func, namespace, md))
@@ -1701,7 +1772,7 @@ class TemplateUnion:
 
         self.stability = union.stability
         self.attributes = union.attributes
-        self.available_since = union.available_since
+        self.available_since = union.available_since or namespace.version
         if union.deprecated:
             (version, msg) = union.deprecated_since
             self.deprecated_since = {
@@ -1718,20 +1789,20 @@ class TemplateUnion:
             if not field.private:
                 self.fields.append(TemplateField(namespace, field))
 
+        self.ctors = []
         if len(union.constructors) != 0:
-            self.ctors = []
             for ctor in union.constructors:
                 if not config.is_hidden(union.name, "constructor", ctor.name):
                     self.ctors.append(gen_index_func(ctor, namespace, md))
 
+        self.methods = []
         if len(union.methods) != 0:
-            self.methods = []
             for method in union.methods:
                 if not config.is_hidden(union.name, "method", method.name):
                     self.methods.append(gen_index_func(method, namespace, md))
 
+        self.type_funcs = []
         if len(union.functions) != 0:
-            self.type_funcs = []
             for func in union.functions:
                 if not config.is_hidden(union.name, "function", func.name):
                     self.type_funcs.append(gen_index_func(func, namespace, md))
@@ -1778,7 +1849,7 @@ class TemplateAlias:
 
         self.stability = alias.stability
         self.attributes = alias.attributes
-        self.available_since = alias.available_since
+        self.available_since = alias.available_since or namespace.version
         if alias.deprecated:
             (version, msg) = alias.deprecated_since
             self.deprecated_since = {
@@ -1801,6 +1872,7 @@ class TemplateMember:
         self.girname = member.name
         self.nick = member.nick
         self.value = member.value
+        self.available_since = member.available_since or enum.available_since
         if member.doc is not None:
             self.description = utils.preprocess_docs(member.doc.content, namespace)
             filename = member.doc.filename
@@ -1840,7 +1912,7 @@ class TemplateEnum:
 
         self.stability = enum.stability
         self.attributes = enum.attributes
-        self.available_since = enum.available_since
+        self.available_since = enum.available_since or namespace.version
         if enum.deprecated:
             (version, msg) = enum.deprecated_since
             self.deprecated_since = {
@@ -1915,125 +1987,123 @@ def _gen_classes(config, theme_config, output_dir, jinja_env, repository, all_cl
         tmpl = TemplateClass(namespace, cls, config)
         template_classes.append(tmpl)
 
+        if cls.type_struct is not None:
+            class_struct = namespace.find_record(cls.type_struct)
+            class_methods = class_struct.methods
+        else:
+            class_methods = []
+
+        sections = [
+            {
+                "title": "Constructors",
+                "symbols": cls.constructors,
+                "index": tmpl.ctors,
+                "config": "constructor",
+                "template_class": TemplateFunction,
+                "template_renderer": ctor_tmpl,
+                "section_class": "ctor",
+                "section_fragment": "ctor",
+                "template": "type_func",
+            },
+            {
+                "title": "Functions",
+                "symbols": cls.functions,
+                "index": tmpl.type_funcs,
+                "config": "function",
+                "template_class": TemplateFunction,
+                "template_renderer": type_func_tmpl,
+                "section_class": "func",
+                "section_fragment": "type_func",
+                "template": "type_func",
+            },
+            {
+                "title": "Instance methods",
+                "symbols": cls.methods,
+                "index": tmpl.methods,
+                "config": "method",
+                "template_class": TemplateMethod,
+                "template_renderer": method_tmpl,
+                "section_class": "method",
+                "section_fragment": "method",
+                "template": "method",
+            },
+            {
+                "title": "Properties",
+                "symbols": cls.properties.values(),
+                "index": tmpl.properties,
+                "config": "property",
+                "template_class": TemplateProperty,
+                "template_renderer": property_tmpl,
+                "section_class": "property",
+                "section_fragment": "property",
+                "template": "property",
+            },
+            {
+                "title": "Signals",
+                "symbols": cls.signals.values(),
+                "index": tmpl.signals,
+                "config": "signal",
+                "template_class": TemplateSignal,
+                "template_renderer": signal_tmpl,
+                "section_class": "signal",
+                "section_fragment": "signal",
+                "template": "signal",
+            },
+            {
+                "title": "Class methods",
+                "symbols": class_methods,
+                "index": tmpl.class_methods,
+                "config": "function",
+                "template_class": TemplateClassMethod,
+                "template_renderer": class_method_tmpl,
+                "section_class": "method",
+                "section_fragment": "class_method",
+                "template": "class_method",
+            },
+            {
+                "title": "Virtual methods",
+                "symbols": cls.virtual_methods,
+                "index": tmpl.virtual_methods,
+                "config": "method",
+                "template_class": TemplateMethod,
+                "template_renderer": vfunc_tmpl,
+                "section_class": "method",
+                "section_fragment": "vfunc",
+                "template": "vfunc",
+            },
+        ]
+
         if config.show_class_hierarchy:
             tmpl.hierarchy_svg = utils.render_dot(tmpl.dot, output_format="svg")
 
-        with open(class_file, "w") as out:
+        with open(class_file, "w", encoding="utf-8") as out:
             content = class_tmpl.render({
                 'CONFIG': config,
                 'namespace': namespace,
                 'class': tmpl,
+                'sections': sections,
             })
 
             out.write(content)
 
-        for ctor in cls.constructors:
-            if config.is_hidden(cls.name, "constructor", ctor.name):
-                log.debug(f"Skipping hidden constructor {cls.name}.{ctor.name}")
-                continue
-            c = TemplateFunction(namespace, ctor)
-            ctor_file = os.path.join(output_dir, f"ctor.{cls.name}.{ctor.name}.html")
-            log.debug(f"Creating ctor file for {namespace.name}.{cls.name}.{ctor.name}: {ctor_file}")
+        for section in sections:
+            for sym in section['symbols']:
+                if config.is_hidden(cls.name, section['config'], sym.name):
+                    log.debug(f"Skipping hidden symbol {cls.name}.{sym.name}")
+                    continue
 
-            with open(ctor_file, "w") as out:
-                out.write(ctor_tmpl.render({
-                    'CONFIG': config,
-                    'namespace': namespace,
-                    'class': tmpl,
-                    'type_func': c,
-                }))
+                s = section['template_class'](namespace, cls, sym)
+                sym_file = os.path.join(output_dir, f"{section['section_fragment']}.{cls.name}.{sym.name}.html")
+                log.debug(f"Creating symbol file for {namespace.name}.{cls.name}.{sym.name}: {sym_file}")
 
-        for method in cls.methods:
-            if config.is_hidden(cls.name, "method", method.name):
-                log.debug(f"Skipping hidden method {cls.name}.{method.name}")
-                continue
-            m = TemplateMethod(namespace, cls, method)
-            method_file = os.path.join(output_dir, f"method.{cls.name}.{method.name}.html")
-            log.debug(f"Creating method file for {namespace.name}.{cls.name}.{method.name}: {method_file}")
-
-            with open(method_file, "w") as out:
-                out.write(method_tmpl.render({
-                    'CONFIG': config,
-                    'namespace': namespace,
-                    'class': tmpl,
-                    'method': m,
-                }))
-
-        for prop in cls.properties.values():
-            if config.is_hidden(cls.name, 'property', prop.name):
-                log.debug(f"Skipping hidden property {cls.name}.{prop.name}")
-                continue
-            p = TemplateProperty(namespace, cls, prop)
-            prop_file = os.path.join(output_dir, f"property.{cls.name}.{prop.name}.html")
-            log.debug(f"Creating property file for {namespace.name}.{cls.name}.{prop.name}: {prop_file}")
-
-            with open(prop_file, "w") as out:
-                out.write(property_tmpl.render({
-                    'CONFIG': config,
-                    'namespace': namespace,
-                    'class': tmpl,
-                    'property': p,
-                }))
-
-        for signal in cls.signals.values():
-            if config.is_hidden(cls.name, 'signal', signal.name):
-                log.debug(f"Skipping hidden signal {cls.name}.{signal.name}")
-                continue
-            s = TemplateSignal(namespace, cls, signal)
-            signal_file = os.path.join(output_dir, f"signal.{cls.name}.{signal.name}.html")
-            log.debug(f"Creating signal file for {namespace.name}.{cls.name}.{signal.name}: {signal_file}")
-
-            with open(signal_file, "w") as out:
-                out.write(signal_tmpl.render({
-                    'CONFIG': config,
-                    'namespace': namespace,
-                    'class': tmpl,
-                    'signal': s,
-                }))
-
-        if cls.type_struct is not None:
-            class_struct = namespace.find_record(cls.type_struct)
-            for cls_method in class_struct.methods:
-                c = TemplateClassMethod(namespace, cls, cls_method)
-                cls_method_file = os.path.join(output_dir, f"class_method.{cls.name}.{cls_method.name}.html")
-                log.debug(f"Creating class method file for {namespace.name}.{cls.name}.{cls_method.name}: {cls_method_file}")
-
-                with open(cls_method_file, "w") as out:
-                    out.write(class_method_tmpl.render({
+                with open(sym_file, "w", encoding="utf-8") as out:
+                    out.write(section['template_renderer'].render({
                         'CONFIG': config,
                         'namespace': namespace,
                         'class': tmpl,
-                        'class_method': c,
+                        'sections': sections,
+                        section['template']: s,
                     }))
-
-        for vfunc in cls.virtual_methods:
-            f = TemplateMethod(namespace, cls, vfunc)
-            vfunc_file = os.path.join(output_dir, f"vfunc.{cls.name}.{vfunc.name}.html")
-            log.debug(f"Creating vfunc file for {namespace.name}.{cls.name}.{vfunc.name}: {vfunc_file}")
-
-            with open(vfunc_file, "w") as out:
-                out.write(vfunc_tmpl.render({
-                    'CONFIG': config,
-                    'namespace': namespace,
-                    'class': tmpl,
-                    'vfunc': f,
-                }))
-
-        for type_func in cls.functions:
-            if config.is_hidden(cls.name, "function", type_func.name):
-                log.debug(f"Skipping hidden type function {cls.name}.{type_func.name}")
-                continue
-            f = TemplateFunction(namespace, type_func)
-            type_func_file = os.path.join(output_dir, f"type_func.{cls.name}.{type_func.name}.html")
-            log.debug(f"Creating type func file for {namespace.name}.{cls.name}.{type_func.name}: {type_func_file}")
-
-            with open(type_func_file, "w") as out:
-                out.write(type_func_tmpl.render({
-                    'CONFIG': config,
-                    'namespace': namespace,
-                    'class': tmpl,
-                    'type_func': f,
-                }))
 
     return template_classes
 
@@ -2061,104 +2131,107 @@ def _gen_interfaces(config, theme_config, output_dir, jinja_env, repository, all
         tmpl = TemplateInterface(namespace, iface, config)
         template_interfaces.append(tmpl)
 
-        with open(iface_file, "w") as out:
+        if iface.type_struct is not None:
+            iface_struct = namespace.find_record(iface.type_struct)
+            iface_methods = iface_struct.methods
+        else:
+            iface_methods = []
+
+        sections = [
+            {
+                "title": "Functions",
+                "symbols": iface.functions,
+                "index": tmpl.type_funcs,
+                "config": "function",
+                "template_class": TemplateFunction,
+                "template_renderer": type_func_tmpl,
+                "section_class": "func",
+                "section_fragment": "type_func",
+                "template": "type_func",
+            },
+            {
+                "title": "Instance methods",
+                "symbols": iface.methods,
+                "index": tmpl.methods,
+                "config": "method",
+                "template_class": TemplateMethod,
+                "template_renderer": method_tmpl,
+                "section_class": "method",
+                "section_fragment": "method",
+                "template": "method",
+            },
+            {
+                "title": "Properties",
+                "symbols": iface.properties.values(),
+                "index": tmpl.properties,
+                "config": "property",
+                "template_class": TemplateProperty,
+                "template_renderer": property_tmpl,
+                "section_class": "property",
+                "section_fragment": "property",
+                "template": "property",
+            },
+            {
+                "title": "Signals",
+                "symbols": iface.signals.values(),
+                "index": tmpl.signals,
+                "config": "signal",
+                "template_class": TemplateSignal,
+                "template_renderer": signal_tmpl,
+                "section_class": "signal",
+                "section_fragment": "signal",
+                "template": "signal",
+            },
+            {
+                "title": "Interface methods",
+                "symbols": iface_methods,
+                "index": tmpl.class_methods,
+                "config": "function",
+                "template_class": TemplateClassMethod,
+                "template_renderer": class_method_tmpl,
+                "section_class": "method",
+                "section_fragment": "class_method",
+                "template": "class_method",
+            },
+            {
+                "title": "Virtual methods",
+                "symbols": iface.virtual_methods,
+                "index": tmpl.virtual_methods,
+                "config": "method",
+                "template_class": TemplateMethod,
+                "template_renderer": vfunc_tmpl,
+                "section_class": "method",
+                "section_fragment": "vfunc",
+                "template": "vfunc",
+            },
+        ]
+
+        with open(iface_file, "w", encoding="utf-8") as out:
             out.write(iface_tmpl.render({
                 'CONFIG': config,
                 'namespace': namespace,
                 'interface': tmpl,
+                'sections': sections,
             }))
 
-        for method in iface.methods:
-            if config.is_hidden(iface.name, "method", method.name):
-                log.debug(f"Skipping hidden method {iface.name}.{method.name}")
-                continue
-            m = TemplateMethod(namespace, iface, method)
-            method_file = os.path.join(output_dir, f"method.{iface.name}.{method.name}.html")
-            log.debug(f"Creating method file for {namespace.name}.{iface.name}.{method.name}: {method_file}")
+        for section in sections:
+            for sym in section['symbols']:
+                if config.is_hidden(iface.name, section['config'], sym.name):
+                    log.debug(f"Skipping hidden symbol {iface.name}.{sym.name}")
+                    continue
 
-            with open(method_file, "w") as out:
-                out.write(method_tmpl.render({
-                    'CONFIG': config,
-                    'namespace': namespace,
-                    'class': tmpl,
-                    'method': m,
-                }))
+                s = section['template_class'](namespace, iface, sym)
+                sym_file = os.path.join(output_dir, f"{section['section_fragment']}.{iface.name}.{sym.name}.html")
+                log.debug(f"Creating symbol file for {namespace.name}.{iface.name}.{sym.name}: {sym_file}")
 
-        for prop in iface.properties.values():
-            if config.is_hidden(iface.name, 'property', prop.name):
-                log.debug(f"Skipping hidden property {iface.name}.{prop.name}")
-                continue
-            p = TemplateProperty(namespace, iface, prop)
-            prop_file = os.path.join(output_dir, f"property.{iface.name}.{prop.name}.html")
-            log.debug(f"Creating property file for {namespace.name}.{iface.name}.{prop.name}: {prop_file}")
-
-            with open(prop_file, "w") as out:
-                out.write(property_tmpl.render({
-                    'CONFIG': config,
-                    'namespace': namespace,
-                    'class': tmpl,
-                    'property': p,
-                }))
-
-        for signal in iface.signals.values():
-            if config.is_hidden(iface.name, 'signal', signal.name):
-                log.debug(f"Skipping hidden property {iface.name}.{signal.name}")
-                continue
-            s = TemplateSignal(namespace, iface, signal)
-            signal_file = os.path.join(output_dir, f"signal.{iface.name}.{signal.name}.html")
-            log.debug(f"Creating signal file for {namespace.name}.{iface.name}.{signal.name}: {signal_file}")
-
-            with open(signal_file, "w") as out:
-                out.write(signal_tmpl.render({
-                    'CONFIG': config,
-                    'namespace': namespace,
-                    'class': tmpl,
-                    'signal': s,
-                }))
-
-        for vfunc in iface.virtual_methods:
-            v = TemplateMethod(namespace, iface, vfunc)
-            vfunc_file = os.path.join(output_dir, f"vfunc.{iface.name}.{vfunc.name}.html")
-            log.debug(f"Creating vfunc file for {namespace.name}.{iface.name}.{vfunc.name}: {vfunc_file}")
-
-            with open(vfunc_file, "w") as out:
-                out.write(vfunc_tmpl.render({
-                    'CONFIG': config,
-                    'namespace': namespace,
-                    'class': tmpl,
-                    'vfunc': v,
-                }))
-
-        if iface.type_struct is not None:
-            iface_struct = namespace.find_record(iface.type_struct)
-            for cls_method in iface_struct.methods:
-                m = TemplateClassMethod(namespace, iface, cls_method)
-                cls_method_file = os.path.join(output_dir, f"class_method.{iface.name}.{cls_method.name}.html")
-                log.debug(f"Creating class method file for {namespace.name}.{iface.name}.{cls_method.name}: {cls_method_file}")
-
-                with open(cls_method_file, "w") as out:
-                    out.write(class_method_tmpl.render({
+                with open(sym_file, "w", encoding="utf-8") as out:
+                    out.write(section['template_renderer'].render({
                         'CONFIG': config,
                         'namespace': namespace,
                         'class': tmpl,
-                        'class_method': m,
+                        'sections': sections,
+                        section['template']: s,
                     }))
-
-        for type_func in iface.functions:
-            if config.is_hidden(iface.name, "function", type_func.name):
-                log.debug(f"Skipping hidden type function {iface.name}.{type_func.name}")
-                continue
-            f = TemplateFunction(namespace, type_func)
-            type_func_file = os.path.join(output_dir, f"type_func.{iface.name}.{type_func.name}.html")
-            log.debug(f"Creating type func file for {namespace.name}.{iface.name}.{type_func.name}: {type_func_file}")
-
-            with open(type_func_file, "w") as out:
-                out.write(type_func_tmpl.render({
-                    'CONFIG': config,
-                    'namespace': namespace,
-                    'class': tmpl,
-                    'type_func': f,
-                }))
 
     return template_interfaces
 
@@ -2181,7 +2254,7 @@ def _gen_enums(config, theme_config, output_dir, jinja_env, repository, all_enum
         tmpl = TemplateEnum(namespace, enum, config)
         template_enums.append(tmpl)
 
-        with open(enum_file, "w") as out:
+        with open(enum_file, "w", encoding="utf-8") as out:
             out.write(enum_tmpl.render({
                 'CONFIG': config,
                 'namespace': namespace,
@@ -2189,11 +2262,15 @@ def _gen_enums(config, theme_config, output_dir, jinja_env, repository, all_enum
             }))
 
         for type_func in enum.functions:
-            f = TemplateFunction(namespace, type_func)
+            if config.is_hidden(enum.name, "enum", type_func.name):
+                log.debug(f"Skipping hidden symbol {enum.name}.{type_func.name}")
+                continue
+
+            f = TemplateFunction(namespace, enum, type_func)
             type_func_file = os.path.join(output_dir, f"type_func.{enum.name}.{type_func.name}.html")
             log.debug(f"Creating type func file for {namespace.name}.{enum.name}.{type_func.name}: {type_func_file}")
 
-            with open(type_func_file, "w") as out:
+            with open(type_func_file, "w", encoding="utf-8") as out:
                 out.write(type_func_tmpl.render({
                     'CONFIG': config,
                     'namespace': namespace,
@@ -2222,7 +2299,7 @@ def _gen_bitfields(config, theme_config, output_dir, jinja_env, repository, all_
         tmpl = TemplateEnum(namespace, enum, config)
         template_bitfields.append(tmpl)
 
-        with open(enum_file, "w") as out:
+        with open(enum_file, "w", encoding="utf-8") as out:
             out.write(enum_tmpl.render({
                 'CONFIG': config,
                 'namespace': namespace,
@@ -2230,11 +2307,15 @@ def _gen_bitfields(config, theme_config, output_dir, jinja_env, repository, all_
             }))
 
         for type_func in enum.functions:
-            f = TemplateFunction(namespace, type_func)
+            if config.is_hidden(enum.name, "enum", type_func.name):
+                log.debug(f"Skipping hidden symbol {enum.name}.{type_func.name}")
+                continue
+
+            f = TemplateFunction(namespace, enum, type_func)
             type_func_file = os.path.join(output_dir, f"type_func.{enum.name}.{type_func.name}.html")
             log.debug(f"Creating type func file for {namespace.name}.{enum.name}.{type_func.name}: {type_func_file}")
 
-            with open(type_func_file, "w") as out:
+            with open(type_func_file, "w", encoding="utf-8") as out:
                 out.write(type_func_tmpl.render({
                     'CONFIG': config,
                     'namespace': namespace,
@@ -2263,7 +2344,7 @@ def _gen_domains(config, theme_config, output_dir, jinja_env, repository, all_en
         tmpl = TemplateEnum(namespace, enum, config)
         template_domains.append(tmpl)
 
-        with open(enum_file, "w") as out:
+        with open(enum_file, "w", encoding="utf-8") as out:
             out.write(enum_tmpl.render({
                 'CONFIG': config,
                 'namespace': namespace,
@@ -2271,11 +2352,15 @@ def _gen_domains(config, theme_config, output_dir, jinja_env, repository, all_en
             }))
 
         for type_func in enum.functions:
-            f = TemplateFunction(namespace, type_func)
+            if config.is_hidden(enum.name, "enum", type_func.name):
+                log.debug(f"Skipping hidden symbol {enum.name}.{type_func.name}")
+                continue
+
+            f = TemplateFunction(namespace, enum, type_func)
             type_func_file = os.path.join(output_dir, f"type_func.{enum.name}.{type_func.name}.html")
             log.debug(f"Creating type func file for {namespace.name}.{enum.name}.{type_func.name}: {type_func_file}")
 
-            with open(type_func_file, "w") as out:
+            with open(type_func_file, "w", encoding="utf-8") as out:
                 out.write(type_func_tmpl.render({
                     'CONFIG': config,
                     'namespace': namespace,
@@ -2303,7 +2388,7 @@ def _gen_constants(config, theme_config, output_dir, jinja_env, repository, all_
         tmpl = TemplateConstant(namespace, const)
         template_constants.append(tmpl)
 
-        with open(const_file, "w") as out:
+        with open(const_file, "w", encoding="utf-8") as out:
             out.write(const_tmpl.render({
                 'CONFIG': config,
                 'namespace': namespace,
@@ -2330,7 +2415,7 @@ def _gen_aliases(config, theme_config, output_dir, jinja_env, repository, all_al
         tmpl = TemplateAlias(namespace, alias)
         template_aliases.append(tmpl)
 
-        with open(alias_file, "w") as out:
+        with open(alias_file, "w", encoding="utf-8") as out:
             content = alias_tmpl.render({
                 'CONFIG': config,
                 'namespace': namespace,
@@ -2361,62 +2446,70 @@ def _gen_records(config, theme_config, output_dir, jinja_env, repository, all_re
         tmpl = TemplateRecord(namespace, record, config)
         template_records.append(tmpl)
 
-        with open(record_file, "w") as out:
+        sections = [
+            {
+                "title": "Constructors",
+                "symbols": record.constructors,
+                "index": tmpl.ctors,
+                "config": "constructor",
+                "template_class": TemplateFunction,
+                "template_renderer": type_func_tmpl,
+                "section_class": "ctor",
+                "section_fragment": "ctor",
+                "template": "type_func",
+            },
+            {
+                "title": "Functions",
+                "symbols": record.functions,
+                "index": tmpl.type_funcs,
+                "config": "function",
+                "template_class": TemplateFunction,
+                "template_renderer": type_func_tmpl,
+                "section_class": "func",
+                "section_fragment": "type_func",
+                "template": "type_func",
+            },
+            {
+                "title": "Instance methods",
+                "symbols": record.methods,
+                "index": tmpl.methods,
+                "config": "method",
+                "template_class": TemplateMethod,
+                "template_renderer": method_tmpl,
+                "section_class": "method",
+                "section_fragment": "method",
+                "template": "method",
+            },
+        ]
+
+        with open(record_file, "w", encoding="utf-8") as out:
             content = record_tmpl.render({
                 'CONFIG': config,
                 'namespace': namespace,
                 'struct': tmpl,
+                'sections': sections,
             })
 
             out.write(content)
 
-        for ctor in record.constructors:
-            if config.is_hidden(record.name, "constructor", ctor.name):
-                log.debug(f"Skipping hidden constructor {record.name}.{ctor.name}")
-                continue
-            c = TemplateFunction(namespace, ctor)
-            ctor_file = os.path.join(output_dir, f"ctor.{record.name}.{ctor.name}.html")
-            log.debug(f"Creating ctor file for {namespace.name}.{record.name}.{ctor.name}: {ctor_file}")
+        for section in sections:
+            for sym in section['symbols']:
+                if config.is_hidden(record.name, section['config'], sym.name):
+                    log.debug(f"Skipping hidden symbol {record.name}.{sym.name}")
+                    continue
 
-            with open(ctor_file, "w") as out:
-                out.write(type_func_tmpl.render({
-                    'CONFIG': config,
-                    'namespace': namespace,
-                    'class': tmpl,
-                    'type_func': c,
-                }))
+                s = section['template_class'](namespace, record, sym)
+                sym_file = os.path.join(output_dir, f"{section['section_fragment']}.{record.name}.{sym.name}.html")
+                log.debug(f"Creating symbol file for {namespace.name}.{record.name}.{sym.name}: {sym_file}")
 
-        for method in record.methods:
-            if config.is_hidden(record.name, "method", method.name):
-                log.debug(f"Skipping hidden method {record.name}.{method.name}")
-                continue
-            m = TemplateMethod(namespace, record, method)
-            method_file = os.path.join(output_dir, f"method.{record.name}.{method.name}.html")
-            log.debug(f"Creating method file for {namespace.name}.{record.name}.{method.name}: {method_file}")
-
-            with open(method_file, "w") as out:
-                out.write(method_tmpl.render({
-                    'CONFIG': config,
-                    'namespace': namespace,
-                    'class': tmpl,
-                    'method': m,
-                }))
-
-        for type_func in record.functions:
-            if config.is_hidden(record.name, "method", type_func.name):
-                log.debug(f"Skipping hidden type function {record.name}.{type_func.name}")
-                continue
-            f = TemplateFunction(namespace, type_func)
-            type_func_file = os.path.join(output_dir, f"type_func.{record.name}.{type_func.name}.html")
-            log.debug(f"Creating type func file for {namespace.name}.{record.name}.{type_func.name}: {type_func_file}")
-
-            with open(type_func_file, "w") as out:
-                out.write(type_func_tmpl.render({
-                    'CONFIG': config,
-                    'namespace': namespace,
-                    'class': tmpl,
-                    'type_func': f,
-                }))
+                with open(sym_file, "w", encoding="utf-8") as out:
+                    out.write(section['template_renderer'].render({
+                        'CONFIG': config,
+                        'namespace': namespace,
+                        'class': tmpl,
+                        'sections': sections,
+                        section['template']: s,
+                    }))
 
     return template_records
 
@@ -2440,62 +2533,70 @@ def _gen_unions(config, theme_config, output_dir, jinja_env, repository, all_uni
         tmpl = TemplateUnion(namespace, union, config)
         template_unions.append(tmpl)
 
-        with open(union_file, "w") as out:
+        sections = [
+            {
+                "title": "Constructors",
+                "symbols": union.constructors,
+                "index": tmpl.ctors,
+                "config": "constructor",
+                "template_class": TemplateFunction,
+                "template_renderer": type_func_tmpl,
+                "section_class": "ctor",
+                "section_fragment": "ctor",
+                "template": "type_func",
+            },
+            {
+                "title": "Functions",
+                "symbols": union.functions,
+                "index": tmpl.type_funcs,
+                "config": "function",
+                "template_class": TemplateFunction,
+                "template_renderer": type_func_tmpl,
+                "section_class": "func",
+                "section_fragment": "type_func",
+                "template": "type_func",
+            },
+            {
+                "title": "Instance methods",
+                "symbols": union.methods,
+                "index": tmpl.methods,
+                "config": "method",
+                "template_class": TemplateMethod,
+                "template_renderer": method_tmpl,
+                "section_class": "method",
+                "section_fragment": "method",
+                "template": "method",
+            },
+        ]
+
+        with open(union_file, "w", encoding="utf-8") as out:
             content = union_tmpl.render({
                 'CONFIG': config,
                 'namespace': namespace,
                 'struct': tmpl,
+                'sections': sections,
             })
 
             out.write(content)
 
-        for ctor in union.constructors:
-            if config.is_hidden(union.name, "constructor", ctor.name):
-                log.debug(f"Skipping hidden constructor {union.name}.{ctor.name}")
-                continue
-            c = TemplateFunction(namespace, ctor)
-            ctor_file = os.path.join(output_dir, f"ctor.{union.name}.{ctor.name}.html")
-            log.debug(f"Creating ctor file for {namespace.name}.{union.name}.{ctor.name}: {ctor_file}")
+        for section in sections:
+            for sym in section['symbols']:
+                if config.is_hidden(union.name, section['config'], sym.name):
+                    log.debug(f"Skipping hidden symbol {union.name}.{sym.name}")
+                    continue
 
-            with open(ctor_file, "w") as out:
-                out.write(type_func_tmpl.render({
-                    'CONFIG': config,
-                    'namespace': namespace,
-                    'class': tmpl,
-                    'type_func': c,
-                }))
+                s = section['template_class'](namespace, union, sym)
+                sym_file = os.path.join(output_dir, f"{section['section_fragment']}.{union.name}.{sym.name}.html")
+                log.debug(f"Creating symbol file for {namespace.name}.{union.name}.{sym.name}: {sym_file}")
 
-        for method in union.methods:
-            if config.is_hidden(union.name, "method", method.name):
-                log.debug(f"Skipping hidden method {union.name}.{method.name}")
-                continue
-            m = TemplateMethod(namespace, union, method)
-            method_file = os.path.join(output_dir, f"method.{union.name}.{method.name}.html")
-            log.debug(f"Creating method file for {namespace.name}.{union.name}.{method.name}: {method_file}")
-
-            with open(method_file, "w") as out:
-                out.write(method_tmpl.render({
-                    'CONFIG': config,
-                    'namespace': namespace,
-                    'class': tmpl,
-                    'method': m,
-                }))
-
-        for type_func in union.functions:
-            if config.is_hidden(union.name, "function", type_func.name):
-                log.debug(f"Skipping hidden type function {union.name}.{type_func.name}")
-                continue
-            f = TemplateFunction(namespace, type_func)
-            type_func_file = os.path.join(output_dir, f"type_func.{union.name}.{type_func.name}.html")
-            log.debug(f"Creating type func file for {namespace.name}.{union.name}.{type_func.name}: {type_func_file}")
-
-            with open(type_func_file, "w") as out:
-                out.write(type_func_tmpl.render({
-                    'CONFIG': config,
-                    'namespace': namespace,
-                    'class': tmpl,
-                    'type_func': f,
-                }))
+                with open(sym_file, "w", encoding="utf-8") as out:
+                    out.write(section['template_renderer'].render({
+                        'CONFIG': config,
+                        'namespace': namespace,
+                        'class': tmpl,
+                        'sections': sections,
+                        section['template']: s,
+                    }))
 
     return template_unions
 
@@ -2514,10 +2615,10 @@ def _gen_functions(config, theme_config, output_dir, jinja_env, repository, all_
         func_file = os.path.join(output_dir, f"func.{func.name}.html")
         log.info(f"Creating function file for {namespace.name}.{func.name}: {func_file}")
 
-        tmpl = TemplateFunction(namespace, func)
+        tmpl = TemplateFunction(namespace, None, func)
         template_functions.append(tmpl)
 
-        with open(func_file, "w") as out:
+        with open(func_file, "w", encoding="utf-8") as out:
             content = func_tmpl.render({
                 'CONFIG': config,
                 'namespace': namespace,
@@ -2546,7 +2647,7 @@ def _gen_callbacks(config, theme_config, output_dir, jinja_env, repository, all_
         tmpl = TemplateCallback(namespace, func)
         template_callbacks.append(tmpl)
 
-        with open(func_file, "w") as out:
+        with open(func_file, "w", encoding="utf-8") as out:
             content = func_tmpl.render({
                 'CONFIG': config,
                 'namespace': namespace,
@@ -2572,10 +2673,10 @@ def _gen_function_macros(config, theme_config, output_dir, jinja_env, repository
         func_file = os.path.join(output_dir, f"func.{func.name}.html")
         log.info(f"Creating function macro file for {namespace.name}.{func.name}: {func_file}")
 
-        tmpl = TemplateFunction(namespace, func)
+        tmpl = TemplateFunction(namespace, None, func)
         template_functions.append(tmpl)
 
-        with open(func_file, "w") as out:
+        with open(func_file, "w", encoding="utf-8") as out:
             content = func_tmpl.render({
                 'CONFIG': config,
                 'namespace': namespace,
@@ -2606,13 +2707,15 @@ def gen_content_files(config, theme_config, content_dirs, output_dir, jinja_env,
         dst_data = utils.preprocess_docs(src_data, namespace, md=md)
         title = "\n".join(md.Meta.get("title", ["Unknown document"]))
 
+        origin = md.Meta.get("origin", file_name)
+
         content_file = file_name.replace(".md", ".html")
         dst_file = os.path.join(output_dir, content_file)
 
         content = {
             "abs_input_file": src_file,
             "abs_output_file": dst_file,
-            "source_file": file_name,
+            "source_file": origin,
             "output_file": content_file,
             "meta": md.Meta,
             "title": title,
@@ -2662,7 +2765,12 @@ def gen_types_hierarchy(config, theme_config, output_dir, jinja_env, repository)
     def dump_tree(node, out):
         for k in node:
             if '.' in k:
-                out.append(f'<li class="type"><code>{k}</code>')
+                ns, name = k.split('.', 2)
+                data_ns = f'data-namespace="{ns}"'
+                data_link = f'data-link="class.{name}.html"'
+                href = 'href="javascript:void(0)"'
+                css_class = 'class="external"'
+                out.append(f'<li class="type"><a {data_ns} {data_link} {href} {css_class}><code>{k}</code></a>')
             else:
                 out.append(f'<li class="type"><a href="class.{k}.html"><code>{k}</code></a>')
             if len(node[k]) != 0:
@@ -2674,7 +2782,7 @@ def gen_types_hierarchy(config, theme_config, output_dir, jinja_env, repository)
     if len(objects_tree) != 0:
         res += ["<div class=\"docblock\">"]
         res += ["<ul class=\"type root\">"]
-        res += [" <li class=\"type\"><code>GObject</code></li><ul class=\"type\">"]
+        res += [" <li class=\"type\"><a data-namespace=\"GObject\" data-link=\"class.Object.html\" href=\"javascript:void(0)\" class=\"external\"><code>GObject.Object</code></a></li><ul class=\"type\">"]  # noqa: E501
         dump_tree(objects_tree, res)
         res += [" </ul></li>"]
         res += ["</ul>"]
@@ -2683,7 +2791,7 @@ def gen_types_hierarchy(config, theme_config, output_dir, jinja_env, repository)
     if len(typed_tree) != 0:
         res += ["<div class=\"docblock\">"]
         res += ["<ul class=\"type root\">"]
-        res += [" <li class=\"type\"><code>GTypeInstance</code></li><ul class=\"type\">"]
+        res += [" <li class=\"type\"><a data-namespace=\"GObject\" data-link=\"struct.TypeInstance.html\" href=\"javascript:void(0)\" class=\"external\"><code>GObject.TypeInstance</code></li><ul class=\"type\">"]  # noqa: E501
         dump_tree(typed_tree, res)
         res += [" </ul></li>"]
         res += ["</ul>"]
@@ -2704,7 +2812,7 @@ def gen_types_hierarchy(config, theme_config, output_dir, jinja_env, repository)
 
     dst_file = os.path.join(output_dir, content["output_file"])
     log.info(f"Generating type hierarchy file: {dst_file}")
-    with open(dst_file, "w") as outfile:
+    with open(dst_file, "w", encoding="utf-8") as outfile:
         outfile.write(content_tmpl.render({
             "CONFIG": config,
             "namespace": namespace,
@@ -2793,7 +2901,7 @@ def gen_devhelp(config, repository, namespace, symbols, content_files):
                 keyword = etree.SubElement(functions, "keyword")
                 keyword.set("type", "constant")
                 keyword.set("name", t.identifier)
-                keyword.set("link", f"constant.{t.name}.html")
+                keyword.set("link", f"const.{t.name}.html")
                 if t.available_since is not None:
                     keyword.set("since", t.available_since)
                 if t.deprecated_since is not None and t.deprecated_since["version"] is not None:
@@ -3006,7 +3114,7 @@ def gen_reference(config, options, repository, templates_dir, theme_config, cont
     ns_tmpl = jinja_env.get_template(theme_config.namespace_template)
     ns_file = os.path.join(ns_dir, "index.html")
     log.info(f"Creating namespace index file for {namespace.name}-{namespace.version}: {ns_file}")
-    with open(ns_file, "w") as out:
+    with open(ns_file, "w", encoding="utf-8") as out:
         out.write(ns_tmpl.render({
             "CONFIG": config,
             "repository": repository,

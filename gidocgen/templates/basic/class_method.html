@@ -1,16 +1,12 @@
-<!--
-SPDX-FileCopyrightText: 2021 GNOME Foundation
-
-SPDX-License-Identifier: Apache-2.0 OR GPL-3.0-or-later
--->
-
 {% extends "base.html" %}
 
 {% block title %}{{ namespace.name }}.{{ class.class_name }}.{{ class_method.name }}{% endblock %}
 
 {% block meta_other %}
-<meta name="og:title" content="{{ namespace.name }}.{{ class.class_name }}.{{ class_method.name }}"/>
-<meta name="og:description" content="Reference for {{ namespace.name }}.{{ class.class_name }}.{{ class_method.name }}"/>
+  <meta priority="og:title" content="{{ namespace.name }}.{{ class.class_name }}.{{ class_method.name }}"/>
+  <meta priority="og:description" content="Reference for {{ namespace.name }}.{{ class.class_name }}.{{ class_method.name }}"/>
+  <meta name="og:title" content="{{ namespace.name }}.{{ class.class_name }}.{{ class_method.name }}"/>
+  <meta name="og:description" content="Reference for {{ namespace.name }}.{{ class.class_name }}.{{ class_method.name }}"/>
 {% endblock %}
 
 {% block sidebar %}
@@ -38,6 +34,19 @@ SPDX-License-Identifier: Apache-2.0 OR GPL-3.0-or-later
   </header>
 
   <section>
+    <div class="docblock">
+      <p>
+      {%- if CONFIG.is_unstable(class_method.available_since) -%}
+      <span class="emblem available-next" title="This method will be available in the next stable release">unstable</span>&nbsp;
+      {%- endif %}
+      {%- if class_method.deprecated_since -%}
+      <span class="emblem deprecated">deprecated: {{ class_method.deprecated_since.version }}</span>&nbsp;
+      {%- endif -%}
+      {%- if class_method.available_since -%}
+      <span class="emblem available">since: {{ class_method.available_since }}</span>
+      {%- endif -%}
+      </p>
+    </div>
     <div class="declaration">
       <h4 id="declaration" style="display:flex;">
         Declaration
@@ -66,27 +75,31 @@ SPDX-License-Identifier: Apache-2.0 OR GPL-3.0-or-later
       </div>
 
       <div class="docblock">
-        <table>
-          {% if class_method.stability %}
-          <tr><td>Stability:</td><td>{{ class_method.stability }}</td></tr>
-          {% endif %}
-          {% if class_method.available_since %}
-          <tr><td>Available since:</td><td>{{ class_method.available_since }}</td></tr>
-          {% endif %}
-          {% if class_method.deprecated_since %}
-          <tr><td>Deprecated since:</td><td>{{ class_method.deprecated_since.version }}</td></tr>
-          <tr><td colspan="2">{{ class_method.deprecated_since.message }}</td></tr>
-          {% endif %}
-          {% if not class_method.introspectable %}
-          <tr><td>This class method is not directly available to language bindings</td></tr>
-          {% endif %}
-        </table>
+        {% if class_method.stability -%}
+        <p>Stability: {{ class_method.stability }}</p>
+        {%- endif %}
+        {% if class_method.available_since -%}
+        <p>Available since: {{ class_method.available_since }}</p>
+        {%- endif %}
+        {% if class_method.deprecated_since -%}
+        <div>
+          {%- if class_method.deprecated_since.message -%}
+          <p>Deprecated since: {{ class_method.deprecated_since.version }}</p>
+          {{ class_method.deprecated_since.message }}
+          {%- else -%}
+          <p>Deprecated since: {{ class_method.deprecated_since.version }}. Do not use in newly written code</p>
+          {%- endif -%}
+        </div>
+        {%- endif %}
+        {% if not class_method.introspectable -%}
+        <p>This method is not directly available to language bindings.</p>
+        {%- endif %}
       </div>
 
       {% if class_method.attributes %}
       <div class="docblock">
         <table>
-        {% for (key, value) in class_method.attributes.items() %}
+        {% for (key, value) in class_method.attributes.items()|sort %}
           <tr><td>{{ key|escape }}</td><td>{{ value|escape }}</td></tr>
         {% endfor %}
         </table>
@@ -102,11 +115,11 @@ SPDX-License-Identifier: Apache-2.0 OR GPL-3.0-or-later
       </h4>
 
       <div class="docblock">
-        <table class="arguments">
+        <dl class="arguments">
           {% for arg in class_method.arguments %}
-          <tr class="arg-name">
-            <td><code>{{ arg.name }}</code></td>
-            <td>
+          <dt class="arg-name"><code>{{ arg.name }}</code></dt>
+          <dd class="arg-description">
+            <p><em>Type:</em>&nbsp;
             {%- if arg.is_array -%}An array of&nbsp;{%- endif -%}
             {%- if arg.is_list -%}A list of&nbsp;{%- endif -%}
             {%- if arg.link -%}
@@ -114,33 +127,36 @@ SPDX-License-Identifier: Apache-2.0 OR GPL-3.0-or-later
             {%- else -%}
             <code>{{ arg.type_cname }}</code>
             {%- endif -%}
-            </td>
-          </tr>
-          <tr class="arg-description">
-            <td>&nbsp;</td>
-            <td>{{ arg.description|safe }}</td>
-          </tr>
-          {% if arg.direction != "in" %}<tr><td>&nbsp;</td><td title="direction: {{ arg.direction}}">{{ arg.direction_note }}</td></tr>{% endif %}
-          {% if arg.direction == "in" and arg.nullable %}<tr><td>&nbsp;</td><td>The argument can be <code>NULL</code>.</td></tr>{% endif %}
-          {% if arg.direction in ["inout", "out"] and arg.nullable %}<tr><td>&nbsp;</td><td>The argument can be set to <code>NULL</code>.</td></tr>{% endif %}
-          {% if arg.optional %}<tr><td>&nbsp;</td><td>The argument can be <code>NULL</code>.</td></tr>{% endif %}
-          {% if arg.is_array and arg.zero_terminated %}<tr><td>&nbsp;</td><td>The array must be <code>NULL</code>-terminated.</td></tr>{% endif %}
-          {% if arg.is_array and arg.fixed_size > 0 %}<tr><td>&nbsp;</td><td>The array must have {{ arg.fixed_size }} elements.</td></tr>{% endif %}
-          {% if arg.is_array and arg.len_arg %}<tr><td>&nbsp;</td><td>The length of the array is specified in the <code>{{ arg.len_arg }}</code> argument.</td></tr>{% endif %}
-          {% if arg.is_pointer %}<tr><td>&nbsp;</td><td title="transfer: {{ arg.transfer }}">{{ arg.transfer_note }}</td></tr>{% endif %}
-          {% if arg.string_note %}<tr><td>&nbsp;</td><td>{{ arg.string_note }}</td></tr>{% endif %}
+            </p>
+            <p>{{ arg.description|safe }}</p>
+            <table>
+            {% if arg.direction != "in" %}<tr><td title="direction: {{ arg.direction}}">{{ arg.direction_note }}</td></tr>{% endif %}
+            {% if arg.direction == "in" and arg.nullable %}<tr><td>The argument can be <code>NULL</code>.</td></tr>{% endif %}
+            {% if arg.direction in ["inout", "out"] and arg.nullable %}<tr><td>The argument can be set to <code>NULL</code> by the class method</td></tr>{% endif %}
+            {% if arg.optional %}<tr><td>The argument can be <code>NULL</code>.</td></tr>{% endif %}
+            {% if arg.is_array and arg.zero_terminated %}<tr><td>The array must be <code>NULL</code>-terminated.</td></tr>{% endif %}
+            {% if arg.is_array and arg.fixed_size > 0 %}<tr><td>The array must have {{ arg.fixed_size }} elements.</td></tr>{% endif %}
+            {% if arg.is_array and arg.len_arg %}<tr><td>The length of the array is specified in the <code>{{ arg.len_arg }}</code> argument.</td></tr>{% endif %}
+            {% if arg.is_pointer %}<tr><td title="transfer: {{ arg.transfer }}">{{ arg.transfer_note }}</td></tr>{% endif %}
+            {% if arg.string_note %}<tr><td>{{ arg.string_note }}</td></tr>{% endif %}
+            </table>
+          </dd>
           {% endfor %}
+
           {% if class_method.throws %}
-          <tr class="arg-name">
-            <td><code>error</code></td>
-            <td><code>GError **</code></td>
-          </tr>
-          <tr class="arg-description">
-            <td>&nbsp;</td>
-            <td>The return location for a <code>GError*</code>, or <code>NULL</code>.</td>
-          </tr>
+          <dt class="arg-name"><code>error</code></dt>
+          <dd class="arg-description">
+            <p><em>Type:</em>&nbsp;<a href="javascript:void(0)" data-namespace="GLib" data-link="struct.Error.html" class="external"><code>GError **</code></a></p>
+            <p>The return location for <a href="https://docs.gtk.org/glib/error-reporting.html#rules-for-use-of-gerror">a recoverable error</a>.</p>
+            <table>
+              <tr><td>The argument can be <code>NULL</code>.</td></tr>
+              <tr><td>If the return location is not <code>NULL</code>, then you must initialize it to a <code>NULL</code> <code>GError*</code>.</td></tr>
+              <tr><td>The argument will be left initialized to <code>NULL</code> by the class method if there are no errors.</td></tr>
+              <tr><td>In case of error, the argument will be set to a newly allocated <code>GError</code>; the caller will take ownership of the data, and be responsible for freeing it.</td></tr>
+            </table>
+          </dd>
           {% endif %}
-        </table>
+        </dl>
       </div>
     </div>
     {% endif %}
@@ -153,10 +169,9 @@ SPDX-License-Identifier: Apache-2.0 OR GPL-3.0-or-later
       </h4>
 
       <div class="docblock">
-        <table class="returns">
-          <tr class="arg-name">
-            <td>Returns:</td>
-            <td>
+        <div class="returns">
+          <div class="arg-description">
+            <p><em>Type:</em>&nsbp;
             {%- if class_method.return_value.is_array -%}An array of&nbsp;{%- endif -%}
             {%- if class_method.return_value.is_list -%}A list of&nbsp;{%- endif -%}
             {%- if class_method.return_value.is_list_model -%}A list model of&nbsp;{%- endif -%}
@@ -165,19 +180,20 @@ SPDX-License-Identifier: Apache-2.0 OR GPL-3.0-or-later
             {%- else -%}
             <code>{{ class_method.return_value.type_cname }}</code>
             {%- endif -%}
-            </td>
-          </tr>
-          <tr class="arg-description">
-            <td>&nbsp;</td>
-            <td>{{ class_method.return_value.description|safe }}</td>
-          </tr>
-          {% if class_method.return_value.is_array and class_method.return_value.zero_terminated %}<tr><td>&nbsp;</td><td>The array is <code>NULL</code>-terminated.</td></tr>{% endif %}
-          {% if class_method.return_value.is_array and class_method.return_value.fixed_size > 0 %}<tr><td>&nbsp;</td><td>The array has {{ class_method.return_value.fixed_size }} elements.</td></tr>{% endif %}
-          {% if class_method.return_value.is_array and class_method.return_value.len_arg %}<tr><td>&nbsp;</td><td>The length of the array is in the <code>{{ class_method.return_value.len_arg }}</code> argument.</td></tr>{% endif %}
-          {% if class_method.return_value.is_pointer %}<tr><td>&nbsp;</td><td title="transfer: {{ class_method.return_value.transfer }}">{{ class_method.return_value.transfer_note }}</td></tr>{% endif %}
-          {% if class_method.return_value.is_pointer and class_method.return_value.nullable %}<tr><td>&nbsp;</td><td>The return value can be <code>NULL</code>.</td></tr>{% endif %}
-          {% if class_method.return_value.string_note %}<tr><td>&nbsp;</td><td>{{ class_method.return_value.string_note }}</td></tr>{% endif %}
-        </table>
+            </p>
+            <p>{{ class_method.return_value.description|safe }}</p>
+          </div>
+          <div>
+            <table>
+            {% if class_method.return_value.is_array and class_method.return_value.zero_terminated %}<tr><td>The array is <code>NULL</code>-terminated.</td></tr>{% endif %}
+            {% if class_method.return_value.is_array and class_method.return_value.fixed_size > 0 %}<tr><td>The array has {{ class_method.return_value.fixed_size }} elements.</td></tr>{% endif %}
+            {% if class_method.return_value.is_array and class_method.return_value.len_arg %}<tr><td>The length of the array is in the <code>{{ class_method.return_value.len_arg }}</code> argument.</td></tr>{% endif %}
+            {% if class_method.return_value.is_pointer %}<tr><td title="transfer: {{ class_method.return_value.transfer }}">{{ class_method.return_value.transfer_note }}</td></tr>{% endif %}
+            {% if class_method.return_value.is_pointer and class_method.return_value.nullable %}<tr><td>The return value can be <code>NULL</code>.</td></tr>{% endif %}
+            {% if class_method.return_value.string_note %}<tr><td>{{ class_method.return_value.string_note }}</td></tr>{% endif %}
+            </table>
+          </div>
+        </div>
       </div>
     </div>
     {% endif %}

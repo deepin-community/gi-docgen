@@ -3,11 +3,44 @@
 
 import os
 import re
-import toml
+
+toml_module = None
+try:
+    import tomllib as toml_lib
+    toml_module = 'tomlib'
+except ImportError:
+    try:
+        import tomli as toml_lib
+        toml_module = 'tomli'
+    except ImportError:
+        import toml as toml_lib
+        toml_module = 'toml'
 
 from urllib.parse import urljoin
+from packaging import version as packaging_version
 
-from . import log, utils
+from . import core, log, utils
+
+
+class TomlConfig:
+    """Wrapper class for TOML loading"""
+
+    @staticmethod
+    def load(toml):
+        log.debug(f"Using TOML module: {toml_module}")
+        if toml_module is None:
+            log.error("No toml module found")
+        elif toml_module in ['tomlib', 'tomli']:
+            try:
+                with open(toml, "rb") as f:
+                    return toml_lib.load(f)
+            except toml_lib.TOMLDecodeError as err:
+                log.error(f"Invalid configuration file: {toml}: {err}")
+        elif toml_module in ['toml']:
+            try:
+                return toml_lib.load(toml)
+            except toml_lib.TomlDecodeError as err:
+                log.error(f"Invalid configuration file: {toml}: {err}")
 
 
 class GIDocConfig:
@@ -17,11 +50,8 @@ class GIDocConfig:
 
         self._config = {}
         if self._config_file is not None:
-            try:
-                log.debug(f"Reading configuration file: {self._config_file}")
-                self._config = toml.load(self._config_file)
-            except toml.TomlDecodeError as err:
-                log.error(f"Invalid configuration file: {self._config_file}: {err}")
+            log.debug(f"Reading configuration file: {self._config_file}")
+            self._config = TomlConfig.load(self._config_file)
 
     @property
     def library(self):
@@ -147,6 +177,10 @@ class GIDocConfig:
         return source_location.get('base_url', '')
 
     @property
+    def content_base_url(self):
+        return self.extra.get('content_base_url')
+
+    @property
     def file_format(self):
         source_location = self._config.get('source-location', {})
         return source_location.get('file_format', '{filename}#L{line}')
@@ -172,6 +206,10 @@ class GIDocConfig:
         endpoint = file_format.replace('{filename}', filename)
         endpoint = endpoint.replace('{line}', str(line))
         return urljoin(base_url, endpoint)
+
+    def content_link(self, content_file):
+        base_url = self.content_base_url
+        return urljoin(base_url, content_file)
 
     @property
     def objects(self):
@@ -208,6 +246,19 @@ class GIDocConfig:
             return True
         return self.match_object(name, 'check_ignore', category, key)
 
+    def is_unstable(self, version):
+        if not version:
+            return False
+        cur_version = self.library.get('version')
+        if cur_version is None:
+            return False
+
+        return packaging_version.parse(version) > packaging_version.parse(cur_version)
+
+    @property
+    def generator(self):
+        return f"{core.version}"
+
 
 class GITemplateConfig:
     """Load and represent the template configuration"""
@@ -217,11 +268,8 @@ class GITemplateConfig:
         self._config_file = os.path.join(templates_dir, template_name, f"{template_name}.toml")
 
         self._config = {}
-        try:
-            log.debug(f"Reading template configuration file: {self._config_file}")
-            self._config = toml.load(self._config_file)
-        except toml.TomlDecodeError as err:
-            log.error(f"Invalid template configuration file: {self._config_file}: {err}")
+        log.debug(f"Reading template configuration file: {self._config_file}")
+        self._config = TomlConfig.load(self._config_file)
 
     @property
     def name(self):

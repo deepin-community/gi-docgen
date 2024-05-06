@@ -1,9 +1,3 @@
-<!--
-SPDX-FileCopyrightText: 2021 GNOME Foundation
-
-SPDX-License-Identifier: Apache-2.0 OR GPL-3.0-or-later
--->
-
 {% extends "base.html" %}
 
 {% block title %}{{ namespace.name }}.{{ class.name }}:{{ property.name }}{% endblock %}
@@ -40,6 +34,19 @@ SPDX-License-Identifier: Apache-2.0 OR GPL-3.0-or-later
   </header>
 
   <section>
+    <div class="docblock">
+      <p>
+      {%- if CONFIG.is_unstable(property.available_since) -%}
+      <span class="emblem available-next" title="This property will be available in the next stable release">unstable</span>&nbsp;
+      {%- endif %}
+      {%- if property.deprecated_since -%}
+      <span class="emblem deprecated">deprecated: {{ property.deprecated_since.version }}</span>&nbsp;
+      {%- endif -%}
+      {%- if property.available_since -%}
+      <span class="emblem available">since: {{ property.available_since }}</span>
+      {%- endif -%}
+      </p>
+    </div>
     <div class="declaration toggle-wrapper">
       <h4 id="declaration">
         Declaration
@@ -93,7 +100,7 @@ SPDX-License-Identifier: Apache-2.0 OR GPL-3.0-or-later
       {% if property.attributes %}
       <div class="docblock">
         <table>
-        {% for (key, value) in property.attributes.items() %}
+        {% for (key, value) in property.attributes.items()|sort %}
           <tr><td>{{ key|escape }}</td><td>{{ value|escape }}</td></tr>
         {% endfor %}
         </table>

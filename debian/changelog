@@ -1,3 +1,82 @@
+gi-docgen (2023.3+ds-1) unstable; urgency=medium
+
+  * New upstream release
+  * Drop patches that were applied upstream
+  * d/control: Add new dependency on python3-packaging
+  * d/copyright: Update
+
+ -- Simon McVittie <smcv@debian.org>  Thu, 07 Dec 2023 10:49:15 +0000
+
+gi-docgen (2023.1+ds-5) unstable; urgency=high
+
+  * d/p/debian/utils-Search-usr-lib-MULTIARCH-gir-1.0.patch:
+    Add missing import to fix invocation outside package build context
+    (regression in 2023.1+ds-4, Closes: #1056185)
+
+ -- Simon McVittie <smcv@debian.org>  Sat, 18 Nov 2023 14:47:18 +0000
+
+gi-docgen (2023.1+ds-4) unstable; urgency=medium
+
+  [ Simon McVittie ]
+  * d/rules: Stop forcing DEB_PYTHON_INSTALL_LAYOUT.
+    This is no longer necessary with debhelper (>= 13.11.5).
+  * d/p/debian/Disable-web-fonts-for-now.patch:
+    Move non-upstreamable patch into d/p/debian/
+  * d/p/utils-Search-for-GIR-XML-in-GI_GIR_PATH.patch,
+    d/p/test-Assert-that-GIR_GIR_PATH-is-respected.patch,
+    d/p/utils-Always-fall-back-to-usr-share-gir-1.0-on-Unix.patch:
+    Add proposed patches to find GIR XML in $GI_GIR_PATH and
+    /usr/share/gir-1.0, matching GObject-Introspection 1.78.x
+  * d/p/debian/utils-Search-usr-lib-MULTIARCH-gir-1.0.patch:
+    Add Debian-specific patch to search /usr/lib/MULTIARCH/gir-1.0.
+    This is a prerequisite for changing gobject-introspection to install
+    a subset of GIR XML into /usr/lib/MULTIARCH. (Helps: #1029957)
+  * d/control: Stop generating from d/control.in
+
+  [ Amin Bandali ]
+  * Change packaging branch to debian/latest
+
+ -- Simon McVittie <smcv@debian.org>  Sat, 11 Nov 2023 14:50:52 +0000
+
+gi-docgen (2023.1+ds-3) unstable; urgency=medium
+
+  * Avoid trying to install into /usr/local with newer Meson.
+    Mitigates: #1041537
+  * Remove version constraints unnecessary since Debian 11
+
+ -- Simon McVittie <smcv@debian.org>  Wed, 26 Jul 2023 11:35:40 +0100
+
+gi-docgen (2023.1+ds-2) unstable; urgency=medium
+
+  * debian/control.in: Require Python >= 3.11 and drop python3-toml dependency
+  * debian/control.in: Build-Depend on dh-python >= 5.20230130~
+  * Update standards version to 4.6.2, no changes needed
+
+ -- Jeremy Bicha <jbicha@ubuntu.com>  Mon, 30 Jan 2023 14:08:14 -0500
+
+gi-docgen (2023.1+ds-1) unstable; urgency=medium
+
+  [ Jeremy Bicha ]
+  * New upstream release
+
+  [ Debian Janitor ]
+  * Apply multi-arch hints. + gi-docgen-doc: Add Multi-Arch: foreign
+
+ -- Jeremy Bicha <jbicha@ubuntu.com>  Mon, 09 Jan 2023 18:27:48 -0500
+
+gi-docgen (2022.2+ds-1) unstable; urgency=medium
+
+  * New upstream release
+  * d/copyright: Update
+  * d/control.in: Update dependency on python3-markdown
+  * d/p/templates-Remove-html5shiv.patch:
+    Drop patch, an equivalent change was made upstream
+  * d/p/Disable-web-fonts-for-now.patch:
+    Refresh patch
+  * Standards-Version: 4.6.1 (no changes required)
+
+ -- Simon McVittie <smcv@debian.org>  Sat, 12 Nov 2022 17:22:35 +0000
+
 gi-docgen (2022.1+ds-1) unstable; urgency=medium
 
   * New upstream release

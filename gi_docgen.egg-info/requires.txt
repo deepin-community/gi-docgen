@@ -1,6 +1,9 @@
-Markdown
+Markdown>=3.2
 MarkupSafe
 Pygments
 jinja2
-toml
+packaging
 typogrify
+
+[:python_version < "3.11"]
+tomli

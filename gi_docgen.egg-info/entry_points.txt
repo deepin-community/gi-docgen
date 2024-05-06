@@ -1,3 +1,2 @@
 [console_scripts]
 gi-docgen = gidocgen.gidocmain:main
-

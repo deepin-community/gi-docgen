@@ -1,9 +1,3 @@
-<!--
-SPDX-FileCopyrightText: 2021 GNOME Foundation
-
-SPDX-License-Identifier: Apache-2.0 OR GPL-3.0-or-later
--->
-
 {% extends "base.html" %}
 
 {% block title %}{{ namespace.name }} &ndash; {{ namespace.version }}{% endblock %}
@@ -43,8 +37,10 @@ SPDX-License-Identifier: Apache-2.0 OR GPL-3.0-or-later
 <div class="section">
   <h5>Dependencies</h5>
   <div class="links">
-  {% for gir_name, dep in CONFIG.dependencies.items() %}
-    <a href="{{ dep.docs_url }}" class="external">{{ dep.name }}</a>
+  {% for ns_name, repo in repository.includes.items() %}
+    {% for _, lib in CONFIG.dependencies.items() if lib.name == repo.namespace.name %}
+      <a href="{{ lib.docs_url }}" class="external">{{ lib.name }}</a>
+    {% endfor %}
   {% endfor %}
   </div>
 </div>
@@ -71,16 +67,22 @@ SPDX-License-Identifier: Apache-2.0 OR GPL-3.0-or-later
       </table>
     </div>
 
+    {% if repository.c_includes or repository.packages %}
     <div class="meta build toggle-wrapper">
       <h4>Build</h4>
 
       <div class="docblock">
       <table>
+        {% if repository.c_includes %}
         <tr><td>C headers</td><td><code>{{ repository.c_includes|join(', ') }}</code></td></tr>
+        {% endif %}
+        {% if repository.packages %}
         <tr><td>pkg-config files</td><td><code>{{ repository.packages|join(', ') }}</code></td></tr>
+        {% endif %}
       </table>
       </div>
     </div>
+    {% endif %}
   </header>
 
   {% if repository.includes %}
@@ -172,7 +174,20 @@ SPDX-License-Identifier: Apache-2.0 OR GPL-3.0-or-later
           <tr class="section-item">
             <td><a title="{{ element.name }}" class="symbol" href="{{ section_fragment }}.{{ element.name }}.html">{{ element.name }}</a></td>
             {% if CONFIG.show_index_summary %}
-            <td class="docblock-summary">{{ element.summary }}</td>
+            <td class="docblock-summary">
+            {{ element.summary }}
+            <p>
+            {%- if CONFIG.is_unstable(element.available_since) -%}
+            <span class="emblem available-next" title="This symbol will be available in the next stable release">unstable</span>&nbsp;
+            {%- endif %}
+            {%- if element.deprecated_since -%}
+            <span class="emblem deprecated">deprecated: {{ element.deprecated_since.version }}</span>&nbsp;
+            {%- endif -%}
+            {%- if element.available_since -%}
+            <span class="emblem available">since: {{ element.available_since }}</span>
+            {%- endif -%}
+            </p>
+            </td>
             {% endif %}
           </tr>
           {% endfor %}

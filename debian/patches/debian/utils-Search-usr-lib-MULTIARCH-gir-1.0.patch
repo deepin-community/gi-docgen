@@ -1,0 +1,49 @@
+From: Simon McVittie <smcv@debian.org>
+Date: Thu, 9 Nov 2023 11:02:37 +0000
+Subject: utils: Search /usr/lib/MULTIARCH/gir-1.0
+
+Some GIR XML files, notably GLib-2.0.gir, have architecture-specific
+contents. If we're cross-compiling a Debian package, look in the host
+architecture's multiarch lib directory; otherwise, assume that the
+most relevant architecture is the architecture of the Python interpreter.
+
+This is a prerequisite for changing gobject-introspection to install
+a subset of GIR XML into /usr/lib/MULTIARCH.
+
+Bug-Debian: https://bugs.debian.org/1029957
+Forwarded: not-needed, Debian-specific change
+Signed-off-by: Simon McVittie <smcv@debian.org>
+---
+ gidocgen/utils.py | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/gidocgen/utils.py b/gidocgen/utils.py
+index e33b2c5..1248bba 100644
+--- a/gidocgen/utils.py
++++ b/gidocgen/utils.py
+@@ -6,6 +6,7 @@ import os
+ import re
+ import subprocess
+ import sys
++import sysconfig
+ 
+ from markupsafe import Markup
+ from pygments import highlight
+@@ -819,6 +820,17 @@ def default_search_paths():
+         paths.append(os.path.join(xdg_data_home, "gir-1.0"))
+     if xdg_data_dirs is not None:
+         paths.extend([os.path.join(x, "gir-1.0") for x in xdg_data_dirs])
++
++    # Debian-specific: try to use the multiarch library directory
++    multiarch = os.environ.get('DEB_HOST_MULTIARCH', None)
++
++    if multiarch is None:
++        multiarch = sysconfig.get_config_var('MULTIARCH')
++
++    if multiarch is not None:
++        paths.append(f'/usr/lib/{multiarch}/gir-1.0')
++    # End Debian-specific part
++
+     if sys.platform != 'win32' and '/usr/share/gir-1.0' not in paths:
+         paths.append('/usr/share/gir-1.0')
+ 

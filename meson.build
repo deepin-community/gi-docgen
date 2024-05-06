@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0 OR GPL-3.0-or-later
 
 project('gi-docgen',
-  version: '2022.1',
+  version: '2023.3',
   meson_version: '>= 0.55.0',
 )
 
@@ -12,11 +12,40 @@ py = import('python').find_installation('python3',
     'jinja2',
     'markdown',
     'markupsafe',
+    'packaging',
     'pygments',
-    'toml',
     'typogrify',
   ],
 )
+
+markdown_version = run_command(
+  py, '-c', 'import markdown; print(markdown.__version__)',
+  check: true,
+).stdout().strip()
+
+if not markdown_version.version_compare('>=3.2')
+  error('gi-docgen requires at least markdown >= 3.2')
+endif
+
+if py.language_version().version_compare('<3.11')
+  tomli_version = run_command(
+    py, '-c', 'import tomli; print(tomli.__version__)',
+    check: false,
+  ).stdout().strip()
+  if tomli_version.version_compare('>=1.0')
+    message('Falling back to toml on Python <3.11')
+  else
+    toml_version = run_command(
+      py, '-c', 'import toml; print(toml.__version__)',
+      check: false,
+    ).stdout().strip()
+    if toml_version.version_compare('>=0.10.2')
+      warning('Falling back to deprecated toml module; please update to tomli')
+    else
+      error('tomli 1.0 or newer required on Python 3.10 and older')
+    endif
+  endif
+endif
 
 configure_file(
   input: 'gi-docgen.py',

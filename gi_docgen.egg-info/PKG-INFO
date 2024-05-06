@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: gi-docgen
-Version: 2022.1
+Version: 2023.3
 Summary: Documentation tool for GObject-based libraries
 Home-page: https://gitlab.gnome.org/GNOME/gi-docgen
 Author: Emmanuele Bassi
@@ -9,7 +9,6 @@ License: GPL-3.0-or-later AND Apache-2.0 AND CC0-1.0
 Project-URL: Bug tracker, https://gitlab.gnome.org/GNOME/gi-docgen/issues/
 Project-URL: Documentation, https://gnome.pages.gitlab.gnome.org/gi-docgen/
 Keywords: documentation,introspection,gobject,gtk
-Platform: UNKNOWN
 Classifier: Development Status :: 4 - Beta
 Classifier: Environment :: Console
 Classifier: Intended Audience :: Developers
@@ -31,12 +30,13 @@ Requires-Python: >=3.6.0
 Description-Content-Type: text/markdown
 License-File: LICENSES/Apache-2.0.txt
 License-File: LICENSES/GPL-3.0-or-later.txt
-
-<!--
-SPDX-FileCopyrightText: 2021 GNOME Foundation
-
-SPDX-License-Identifier: Apache-2.0 OR GPL-3.0-or-later
--->
+Requires-Dist: Markdown>=3.2
+Requires-Dist: MarkupSafe
+Requires-Dist: Pygments
+Requires-Dist: jinja2
+Requires-Dist: packaging
+Requires-Dist: tomli; python_version < "3.11"
+Requires-Dist: typogrify
 
 GI-DocGen: Documentation tool for GObject-based libraries
 -------------------------------------------------------------------------------
@@ -120,5 +120,3 @@ Copyright 2021  GNOME Foundation
 GI-DocGen is released under the terms of the Apache License, version 2.0, or
 under the terms of the GNU General Public License, either version 3.0 or,
 at your option, any later version.
-
-

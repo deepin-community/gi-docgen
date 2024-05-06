@@ -85,7 +85,7 @@ class GirParser:
         """Prepend a path to the list of search paths"""
         self._search_paths = [path] + self._search_paths
 
-    def parse(self, girfile: T.TextIO) -> None:
+    def parse(self, girfile: T.Union[T.TextIO, str]) -> None:
         """Parse @girfile"""
         log.debug(f"Loading GIR for {girfile}")
         tree = ET.parse(girfile)
@@ -674,6 +674,7 @@ class GirParser:
         nick = node.attrib.get(_glibns("nick"))
 
         res = ast.Member(name=name, value=value, identifier=identifier, nick=nick)
+        res.set_version(node.attrib.get('version'))
         self._maybe_parse_docs(node, res)
         return res
 
@@ -755,13 +756,15 @@ class GirParser:
         transfer = node.attrib.get('transfer-ownership')
         setter = node.attrib.get('setter')
         getter = node.attrib.get('getter')
+        default_value = node.attrib.get('default-value')
 
         ctype = self._parse_ctype(node)
 
         res = ast.Property(name=name, transfer=transfer, target=ctype,
                            writable=writable, readable=readable,
                            construct=construct, construct_only=construct_only,
-                           setter=setter, getter=getter)
+                           setter=setter, getter=getter,
+                           default_value=default_value)
         res.set_introspectable(node.attrib.get('introspectable', '1') != '0')
         res.set_version(node.attrib.get('version'))
         self._maybe_parse_docs(node, res)

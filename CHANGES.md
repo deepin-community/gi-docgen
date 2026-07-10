@@ -12,6 +12,55 @@ All notable changes to this project will be documented in this file.
 
 ### Removed
 
+## [2025.1] - 2025-02-28
+
+### Added
+
+- Add layout for tablet portrait mode [#95]
+- Support static virtual methods [#211]
+
+### Changed
+
+- Don't generate classes hierarchy if not needed [!220]
+- Improve copy buttons on narrow layouts [#91]
+
+### Fixed
+
+- Only consider dot data processing fail if dot returns non-zero [#188]
+- Show non-standard instance parameters [#202]
+- Fix C declaration of structure fields [#210]
+
+## [2024.1] - 2024-05-20
+
+### Added
+
+- Add unit testing for link syntax
+- Support link to enumeration members [!214, !215]
+- Add favicon support [#152]
+- Add proper anchor for enum members [#183]
+- Parse optional anchors in links [#191]
+- Generate a link to finish functions [#189]
+- Add 'inline' to C declarations for inline callables [#173]
+- Make the logo a link to the index [#195]
+- Clear search when pressing Escape [#194]
+
+### Changed
+
+- Update the wording for transfer modes [!205]
+- Turn deprecation notices into admonitions [#155]
+- Improve filesystem string type docs [#193]
+
+### Fixed
+
+- Fix doubled paragraph tags around descriptions [!206]
+- Append period after last line in more cases [#181]
+- Documentation fixes [!223, #198]
+- Use the basename of the urlmap file [#197]
+
+### Removed
+
+- Revert "generate: Add fallback for missing "since"" [#179]
+
 ## [2023.3] - 2023-11-25
 
 ### Fixed

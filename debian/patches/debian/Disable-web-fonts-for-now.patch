@@ -8,55 +8,12 @@ is not really in the scope of packaging gi-docgen.
 
 Forwarded: not-needed, Debian-specific change
 ---
- gi_docgen.egg-info/SOURCES.txt      |  31 -------
  gidocgen/templates/basic/basic.toml |  31 -------
  gidocgen/templates/basic/fonts.css  | 176 ------------------------------------
  gidocgen/templates/basic/style.css  |   2 -
  setup.cfg                           |   2 -
- 5 files changed, 242 deletions(-)
+ 4 files changed, 211 deletions(-)
 
-diff --git a/gi_docgen.egg-info/SOURCES.txt b/gi_docgen.egg-info/SOURCES.txt
-index 72f633c..6df8f83 100644
---- a/gi_docgen.egg-info/SOURCES.txt
-+++ b/gi_docgen.egg-info/SOURCES.txt
-@@ -72,37 +72,6 @@ gidocgen/utils.py
- gidocgen/gir/__init__.py
- gidocgen/gir/ast.py
- gidocgen/gir/parser.py
--gidocgen/templates/basic/RedHatDisplay-Black.woff
--gidocgen/templates/basic/RedHatDisplay-Black.woff2
--gidocgen/templates/basic/RedHatDisplay-BlackItalic.woff
--gidocgen/templates/basic/RedHatDisplay-BlackItalic.woff2
--gidocgen/templates/basic/RedHatDisplay-Bold.woff
--gidocgen/templates/basic/RedHatDisplay-Bold.woff2
--gidocgen/templates/basic/RedHatDisplay-BoldItalic.woff
--gidocgen/templates/basic/RedHatDisplay-BoldItalic.woff2
--gidocgen/templates/basic/RedHatDisplay-Italic.woff
--gidocgen/templates/basic/RedHatDisplay-Italic.woff2
--gidocgen/templates/basic/RedHatDisplay-Medium.woff
--gidocgen/templates/basic/RedHatDisplay-Medium.woff2
--gidocgen/templates/basic/RedHatDisplay-MediumItalic.woff
--gidocgen/templates/basic/RedHatDisplay-MediumItalic.woff2
--gidocgen/templates/basic/RedHatDisplay-Regular.woff
--gidocgen/templates/basic/RedHatDisplay-Regular.woff2
--gidocgen/templates/basic/RedHatText-Bold.woff
--gidocgen/templates/basic/RedHatText-Bold.woff2
--gidocgen/templates/basic/RedHatText-BoldItalic.woff
--gidocgen/templates/basic/RedHatText-BoldItalic.woff2
--gidocgen/templates/basic/RedHatText-Italic.woff
--gidocgen/templates/basic/RedHatText-Italic.woff2
--gidocgen/templates/basic/RedHatText-Medium.woff
--gidocgen/templates/basic/RedHatText-Medium.woff2
--gidocgen/templates/basic/RedHatText-MediumItalic.woff
--gidocgen/templates/basic/RedHatText-MediumItalic.woff2
--gidocgen/templates/basic/RedHatText-Regular.woff
--gidocgen/templates/basic/RedHatText-Regular.woff2
--gidocgen/templates/basic/SourceCodePro-It.ttf.woff
--gidocgen/templates/basic/SourceCodePro-Regular.ttf.woff
--gidocgen/templates/basic/SourceCodePro-Semibold.ttf.woff
- gidocgen/templates/basic/base.html
- gidocgen/templates/basic/basic.toml
- gidocgen/templates/basic/class.html
 diff --git a/gidocgen/templates/basic/basic.toml b/gidocgen/templates/basic/basic.toml
 index 3274d04..30050a1 100644
 --- a/gidocgen/templates/basic/basic.toml
@@ -282,7 +239,7 @@ index ce790e7..0a01b93 100644
 -  font-display: swap;
 -}
 diff --git a/gidocgen/templates/basic/style.css b/gidocgen/templates/basic/style.css
-index 5d3ff74..f6a0a66 100644
+index 8601e04..a191e99 100644
 --- a/gidocgen/templates/basic/style.css
 +++ b/gidocgen/templates/basic/style.css
 @@ -7,8 +7,6 @@
@@ -295,15 +252,15 @@ index 5d3ff74..f6a0a66 100644
   * LIGHT THEME
   *********************************/
 diff --git a/setup.cfg b/setup.cfg
-index 6e9e7b1..4825e9c 100644
+index fe5007a..5549d23 100644
 --- a/setup.cfg
 +++ b/setup.cfg
-@@ -70,8 +70,6 @@ gidocgen =
- 	templates/basic/*.html
- 	templates/basic/*.js
- 	templates/basic/*.png
--	templates/basic/*.woff2
--	templates/basic/*.woff
- 	py.typed
+@@ -75,8 +75,6 @@ gidocgen =
+   templates/basic/*.html
+   templates/basic/*.js
+   templates/basic/*.png
+-  templates/basic/*.woff2
+-  templates/basic/*.woff
+   py.typed
  
  [bdist_wheel]

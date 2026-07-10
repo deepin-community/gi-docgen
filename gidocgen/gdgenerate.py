@@ -17,56 +17,115 @@ from . import config, gir, log, utils
 from . import gdgenindices
 
 
+class CallableType:
+    CALLBACK = 0
+    FUNCTION = 1
+    METHOD = 2
+    CLASS_METHOD = 3
+    SIGNAL = 4
+
+
 HELP_MSG = "Generates the reference"
 
 MISSING_DESCRIPTION = "No description available."
 
 STRING_TYPES = {
     'utf8': 'The value is a NUL terminated UTF-8 string.',
-    'filename': 'The value is a file system path, using the OS encoding.',
+    'filename': 'The value is a platform-native string, using the preferred OS encoding on Unix and UTF-8 on Windows.',
 }
 
 STRING_ELEMENT_TYPES = {
     'utf8': 'Each element is a NUL terminated UTF-8 string.',
-    'filename': 'Each element is a file system path, using the OS encoding.',
+    'filename': 'Each element is a platform-native string, using the preferred OS encoding on Unix and UTF-8 on Windows.',
 }
 
-FUNCTION_IN_ARG_TRANSFER_MODES = {
-    'none': 'The data is owned by the caller of the function.',
-    'container': 'The called function takes ownership of the data container, but not the data inside it.',
-    'full': 'The called function takes ownership of the data, and is responsible for freeing it.',
+IN_ARG_TRANSFER_MODES = {
+    CallableType.CALLBACK: {
+        'none': 'The data is owned by the caller of the function.',
+        'container': 'The called function takes ownership of the data container, but not the data inside it.',
+        'full': 'The called function takes ownership of the data, and is responsible for freeing it.',
+    },
+    CallableType.FUNCTION: {
+        'none': 'The data is owned by the caller of the function.',
+        'container': 'The called function takes ownership of the data container, but not the data inside it.',
+        'full': 'The called function takes ownership of the data, and is responsible for freeing it.',
+    },
+    CallableType.METHOD: {
+        'none': 'The data is owned by the caller of the method.',
+        'container': 'The instance takes ownership of the data container, but not the data inside it.',
+        'full': 'The instance takes ownership of the data, and is responsible for freeing it.',
+    },
+    CallableType.CLASS_METHOD: {
+        'none': 'The data is owned by the caller of the method.',
+        'container': 'The class takes ownership of the data container, but not the data inside it.',
+        'full': 'The class takes ownership of the data, and is responsible for freeing it.',
+    },
+    CallableType.SIGNAL: {
+        'none': 'The data is owned by the caller of the function.',
+        'container': 'The called function takes ownership of the data container, but not the data inside it.',
+        'full': 'The called function takes ownership of the data, and is responsible for freeing it.',
+    },
 }
 
-METHOD_IN_ARG_TRANSFER_MODES = {
-    'none': 'The data is owned by the caller of the method.',
-    'container': 'The instance takes ownership of the data container, but not the data inside it.',
-    'full': 'The instance takes ownership of the data, and is responsible for freeing it.',
+OUT_ARG_TRANSFER_MODES = {
+    CallableType.CALLBACK: {
+        'none': 'The returned data is owned by the function.',
+        'container': 'The caller of the function takes ownership of the returned data container, but not the data inside it.',
+        'full': 'The caller of the function takes ownership of the returned data, and is responsible for freeing it.',
+    },
+    CallableType.FUNCTION: {
+        'none': 'The returned data is owned by the function.',
+        'container': 'The caller of the function takes ownership of the returned data container, but not the data inside it.',
+        'full': 'The caller of the function takes ownership of the returned data, and is responsible for freeing it.',
+    },
+    CallableType.METHOD: {
+        'none': 'The returned data is owned by the instance.',
+        'container': 'The caller of the method takes ownership of the returned data container, but not the data inside it.',
+        'full': 'The caller of the method takes ownership of the returned data, and is responsible for freeing it.',
+    },
+    CallableType.CLASS_METHOD: {
+        'none': 'The returned data is owned by the class.',
+        'container': 'The caller of the method takes ownership of the returned data container, but not the data inside it.',
+        'full': 'The caller of the method takes ownership of the returned data, and is responsible for freeing it.',
+    },
+    CallableType.SIGNAL: {
+        'none': 'The returned data is owned by the function.',
+        'container': 'The caller of the function takes ownership of the returned data container, but not the data inside it.',
+        'full': 'The caller of the function takes ownership of the returned data, and is responsible for freeing it.',
+    },
 }
 
-FUNCTION_OUT_ARG_TRANSFER_MODES = {
-    'none': 'The data is owned by the function.',
-    'container': 'The caller of the function takes ownership of the data container, but not the data inside it.',
-    'full': 'The caller of the function takes ownership of the data, and is responsible for freeing it.',
-}
-
-METHOD_OUT_ARG_TRANSFER_MODES = {
-    'none': 'The data is owned by the instance.',
-    'container': 'The caller of the method takes ownership of the data container, but not the data inside it.',
-    'full': 'The caller of the method takes ownership of the data, and is responsible for freeing it.',
-}
-
-RETVAL_TRANSFER_MODES = {
-    'none': 'The data is owned by the called function.',
-    'container': 'The caller of the function takes ownership of the data container, but not the data inside it.',
-    'full': 'The caller of the function takes ownership of the data, and is responsible for freeing it.',
-    'floating': 'The returned data has a floating reference.',
-}
-
-METHOD_RETVAL_TRANSFER_MODES = {
-    'none': 'The data is owned by the instance.',
-    'container': 'The caller of the method takes ownership of the data container, but not the data inside it.',
-    'full': 'The caller of the method takes ownership of the data, and is responsible for freeing it.',
-    'floating': 'The returned data has a floating reference.',
+RETURN_TRANSFER_MODES = {
+    CallableType.CALLBACK: {
+        'none': 'The data is owned by the called function.',
+        'container': 'The caller of the function takes ownership of the data container, but not the data inside it.',
+        'full': 'The caller of the function takes ownership of the data, and is responsible for freeing it.',
+        'floating': 'The returned data has a floating reference.',
+    },
+    CallableType.FUNCTION: {
+        'none': 'The data is owned by the called function.',
+        'container': 'The caller of the function takes ownership of the data container, but not the data inside it.',
+        'full': 'The caller of the function takes ownership of the data, and is responsible for freeing it.',
+        'floating': 'The returned data has a floating reference.',
+    },
+    CallableType.METHOD: {
+        'none': 'The returned data is owned by the instance.',
+        'container': 'The caller of the method takes ownership of the returned data container, but not the data inside it.',
+        'full': 'The caller of the method takes ownership of the returned data, and is responsible for freeing it.',
+        'floating': 'The returned data has a floating reference.',
+    },
+    CallableType.CLASS_METHOD: {
+        'none': 'The returned data is owned by the class.',
+        'container': 'The caller of the method takes ownership of the returned data container, but not the data inside it.',
+        'full': 'The caller of the method takes ownership of the returned data, and is responsible for freeing it.',
+        'floating': 'The returned data has a floating reference.',
+    },
+    CallableType.SIGNAL: {
+        'none': 'The data is owned by the called function.',
+        'container': 'The caller of the function takes ownership of the data container, but not the data inside it.',
+        'full': 'The caller of the function takes ownership of the data, and is responsible for freeing it.',
+        'floating': 'The returned data has a floating reference.',
+    },
 }
 
 DIRECTION_MODES = {
@@ -118,18 +177,12 @@ def type_name_to_cname(fqtn, is_pointer=False):
     return "".join(res)
 
 
-def transfer_note(transfer, direction, method=False):
+def transfer_note(transfer, direction, method=CallableType.FUNCTION):
     if direction in ['out', 'inout']:
-        if method:
-            return METHOD_OUT_ARG_TRANSFER_MODES[transfer]
-        else:
-            return FUNCTION_OUT_ARG_TRANSFER_MODES[transfer]
+        mode = OUT_ARG_TRANSFER_MODES[method]
     else:
-        if method:
-            return METHOD_IN_ARG_TRANSFER_MODES[transfer]
-        else:
-            return FUNCTION_IN_ARG_TRANSFER_MODES[transfer]
-    return None
+        mode = IN_ARG_TRANSFER_MODES[method]
+    return mode.get(transfer)
 
 
 def gen_index_func(func, namespace, md=None):
@@ -146,7 +199,7 @@ def gen_index_func(func, namespace, md=None):
     if func.available_since is not None:
         available_since = func.available_since
     else:
-        available_since = namespace.version
+        available_since = None
     if func.deprecated:
         (version, msg) = func.deprecated_since
         deprecated_since = version
@@ -170,7 +223,7 @@ def gen_index_property(prop, namespace, md=None):
     if prop.available_since is not None:
         available_since = prop.available_since
     else:
-        available_since = namespace.version
+        available_since = None
     if prop.deprecated:
         (version, msg) = prop.deprecated_since
         deprecated_since = version
@@ -193,7 +246,7 @@ def gen_index_signal(signal, namespace, md=None):
     if signal.available_since is not None:
         available_since = signal.available_since
     else:
-        available_since = namespace.version
+        available_since = None
     if signal.deprecated:
         (version, msg) = signal.deprecated_since
         deprecated_since = version
@@ -390,11 +443,11 @@ class TemplateConstant:
             line = const.doc.line
             const.docs_location = (filename, line)
         else:
-            self.description = MISSING_DESCRIPTION
+            self.description = Markup(f"<p>{MISSING_DESCRIPTION}</p>")
 
         self.stability = const.stability
         self.attributes = const.attributes
-        self.available_since = const.available_since or namespace.version
+        self.available_since = const.available_since
         if const.deprecated:
             (version, msg) = const.deprecated_since
             self.deprecated_since = {
@@ -452,10 +505,10 @@ class TemplateProperty:
             line = prop.doc.line
             self.docs_location = (filename, line)
         else:
-            self.description = MISSING_DESCRIPTION
+            self.description = Markup(f"<p>{MISSING_DESCRIPTION}</p>")
 
         self.stability = prop.stability
-        self.available_since = prop.available_since or namespace.version
+        self.available_since = prop.available_since
         if prop.deprecated:
             (version, msg) = prop.deprecated_since
             self.deprecated_since = {
@@ -578,7 +631,7 @@ class TemplateProperty:
 
 
 class TemplateArgument:
-    def __init__(self, namespace, call, argument):
+    def __init__(self, namespace, call, argument, callable_type):
         self.name = argument.name
         self.type_name = argument.target.name
         self.is_array = isinstance(argument.target, gir.ArrayType)
@@ -617,7 +670,7 @@ class TemplateArgument:
         self.direction = argument.direction or 'in'
         self.direction_note = DIRECTION_MODES[argument.direction]
         self.transfer = argument.transfer or 'none'
-        self.transfer_note = transfer_note(self.transfer, self.direction, method=isinstance(call, gir.Method))
+        self.transfer_note = transfer_note(self.transfer, self.direction, callable_type)
         self.optional = argument.optional
         self.nullable = argument.nullable
         self.scope = SCOPE_MODES[argument.scope or 'none']
@@ -646,7 +699,7 @@ class TemplateArgument:
             self.summary = utils.preprocess_docs(argument.doc.content, namespace, summary=True)
             self.description = utils.preprocess_docs(argument.doc.content, namespace)
         else:
-            self.description = MISSING_DESCRIPTION
+            self.description = Markup(f"<p>{MISSING_DESCRIPTION}</p>")
         if self.is_array:
             name = self.value_type
         elif self.is_list:
@@ -692,7 +745,7 @@ class TemplateArgument:
 
 
 class TemplateReturnValue:
-    def __init__(self, namespace, call, retval):
+    def __init__(self, namespace, call, retval, callable_type):
         self.name = retval.name
         self.type_name = retval.target.name
         self.type_cname = retval.target.ctype
@@ -703,10 +756,8 @@ class TemplateReturnValue:
         self.is_list = isinstance(retval.target, gir.ListType)
         self.is_list_model = self.type_name in ['Gio.ListModel', 'GListModel']
         self.transfer = retval.transfer or 'none'
-        if isinstance(call, gir.Method):
-            self.transfer_note = METHOD_RETVAL_TRANSFER_MODES[retval.transfer or 'none']
-        else:
-            self.transfer_note = RETVAL_TRANSFER_MODES[retval.transfer or 'none']
+        transfer_mode = RETURN_TRANSFER_MODES[callable_type]
+        self.transfer_note = transfer_mode.get(self.transfer)
         self.nullable = retval.nullable
         if self.is_array:
             self.value_type = retval.target.value_type.name
@@ -728,7 +779,7 @@ class TemplateReturnValue:
             self.summary = utils.preprocess_docs(retval.doc.content, namespace, summary=True)
             self.description = utils.preprocess_docs(retval.doc.content, namespace)
         else:
-            self.description = MISSING_DESCRIPTION
+            self.description = Markup(f"<p>{MISSING_DESCRIPTION}</p>")
         self.introspectable = retval.introspectable
         if self.is_array:
             name = self.value_type
@@ -781,7 +832,7 @@ class TemplateSignal:
             line = signal.doc.line
             self.docs_location = (filename, line)
         else:
-            self.description = MISSING_DESCRIPTION
+            self.description = Markup(f"<p>{MISSING_DESCRIPTION}</p>")
 
         self.is_detailed = signal.detailed
         self.is_action = signal.action
@@ -792,15 +843,15 @@ class TemplateSignal:
 
         self.arguments = []
         for arg in signal.parameters:
-            self.arguments.append(TemplateArgument(namespace, signal, arg))
+            self.arguments.append(TemplateArgument(namespace, signal, arg, CallableType.SIGNAL))
 
         self.return_value = None
         if not isinstance(signal.return_value.target, gir.VoidType):
-            self.return_value = TemplateReturnValue(namespace, signal, signal.return_value)
+            self.return_value = TemplateReturnValue(namespace, signal, signal.return_value, CallableType.SIGNAL)
 
         self.stability = signal.stability
         self.attributes = signal.attributes
-        self.available_since = signal.available_since or namespace.version
+        self.available_since = signal.available_since
         if signal.deprecated:
             (version, msg) = signal.deprecated_since
             self.deprecated_since = {
@@ -842,22 +893,26 @@ class TemplateMethod:
                 filename = filename.replace('../', '')
             self.docs_location = (filename, line)
         else:
-            self.description = MISSING_DESCRIPTION
+            self.description = Markup(f"<p>{MISSING_DESCRIPTION}</p>")
 
+        self.is_inline = method.inline
         self.throws = method.throws
 
-        self.instance_parameter = TemplateArgument(namespace, method, method.instance_param)
+        if method.instance_param is not None:
+            self.instance_parameter = TemplateArgument(namespace, method, method.instance_param, CallableType.METHOD)
+        else:
+            self.instance_parameter = None
 
         self.arguments = []
         for arg in method.parameters:
-            self.arguments.append(TemplateArgument(namespace, method, arg))
+            self.arguments.append(TemplateArgument(namespace, method, arg, CallableType.METHOD))
 
         self.return_value = None
         if not isinstance(method.return_value.target, gir.VoidType):
-            self.return_value = TemplateReturnValue(namespace, method, method.return_value)
+            self.return_value = TemplateReturnValue(namespace, method, method.return_value, CallableType.METHOD)
 
         self.stability = method.stability
-        self.available_since = method.available_since or type_.available_since
+        self.available_since = method.available_since
         if method.deprecated:
             (version, msg) = method.deprecated_since
             self.deprecated_since = {
@@ -886,6 +941,13 @@ class TemplateMethod:
             for m in type_.methods:
                 if m.name == method.shadowed_by:
                     self.shadowed_by_symbol = m.identifier
+                    break
+
+        self.finish_func = method.finish_func
+        if method.finish_func:
+            for m in type_.methods:
+                if m.name == method.finish_func:
+                    self.finish_func_symbol = m.identifier
                     break
 
         def transform_property_attribute(namespace, type_, method, value):
@@ -952,18 +1014,26 @@ class TemplateMethod:
     def c_decl(self):
         res = []
         if self.return_value is None:
-            res += ["void"]
+            retval = "void"
         else:
-            res += [f"{self.return_value.type_cname}"]
+            retval = self.return_value.type_cname
+        if self.is_inline:
+            res += [f"static inline {retval}"]
+        else:
+            res += [retval]
         if self.identifier is not None:
             res += [f"{self.identifier} ("]
         else:
             res += [f"{self.name} ("]
         n_args = len(self.arguments)
         if n_args == 0:
-            res += [f"  {self.instance_parameter.type_cname} {self.instance_parameter.name}"]
+            if self.instance_parameter is not None:
+                res += [f"  {self.instance_parameter.type_cname} {self.instance_parameter.name}"]
+            elif not self.throws:
+                res += ["   void"]
         else:
-            res += [f"  {self.instance_parameter.type_cname} {self.instance_parameter.name},"]
+            if self.instance_parameter is not None:
+                res += [f"  {self.instance_parameter.type_cname} {self.instance_parameter.name},"]
             for (idx, arg) in enumerate(self.arguments):
                 if idx == n_args - 1 and not self.throws:
                     res += [f"  {arg.c_decl}"]
@@ -992,21 +1062,21 @@ class TemplateClassMethod:
                 filename = filename.replace('../', '')
             self.docs_location = (filename, line)
         else:
-            self.description = MISSING_DESCRIPTION
+            self.description = Markup(f"<p>{MISSING_DESCRIPTION}</p>")
 
-        self.instance_parameter = TemplateArgument(namespace, method, method.instance_param)
+        self.instance_parameter = TemplateArgument(namespace, method, method.instance_param, CallableType.CLASS_METHOD)
 
         self.arguments = []
         for arg in method.parameters:
-            self.arguments.append(TemplateArgument(namespace, method, arg))
+            self.arguments.append(TemplateArgument(namespace, method, arg, CallableType.CLASS_METHOD))
 
         self.return_value = None
         if not isinstance(method.return_value.target, gir.VoidType):
-            self.return_value = TemplateReturnValue(namespace, method, method.return_value)
+            self.return_value = TemplateReturnValue(namespace, method, method.return_value, CallableType.CLASS_METHOD)
 
         self.stability = method.stability
         self.attributes = method.attributes
-        self.available_since = method.available_since or cls.available_since
+        self.available_since = method.available_since
         if method.deprecated:
             (version, msg) = method.deprecated_since
             self.deprecated_since = {
@@ -1056,6 +1126,7 @@ class TemplateFunction:
 
         self.is_type_func = type_ is not None
         self.is_macro = isinstance(func, gir.FunctionMacro)
+        self.is_inline = func.inline
 
         self.throws = func.throws
 
@@ -1068,25 +1139,19 @@ class TemplateFunction:
                 filename = filename.replace('../', '')
             self.docs_location = (filename, line)
         else:
-            self.description = MISSING_DESCRIPTION
+            self.description = Markup(f"<p>{MISSING_DESCRIPTION}</p>")
 
         self.arguments = []
         for arg in func.parameters:
-            self.arguments.append(TemplateArgument(namespace, func, arg))
+            self.arguments.append(TemplateArgument(namespace, func, arg, CallableType.FUNCTION))
 
         self.return_value = None
         if not isinstance(func.return_value.target, gir.VoidType):
-            self.return_value = TemplateReturnValue(namespace, func, func.return_value)
+            self.return_value = TemplateReturnValue(namespace, func, func.return_value, CallableType.FUNCTION)
 
         self.stability = func.stability
         self.attributes = func.attributes
-        if func.available_since is None:
-            if type_ is None:
-                self.available_since = namespace.version
-            else:
-                self.available_since = type_.available_since
-        else:
-            self.available_since = func.available_since
+        self.available_since = func.available_since
         if func.deprecated:
             (version, msg) = func.deprecated_since
             self.deprecated_since = {
@@ -1115,6 +1180,21 @@ class TemplateFunction:
             if f is not None:
                 self.shadowed_by_symbol = f.identifier
 
+        self.finish_func = func.finish_func
+        if func.finish_func:
+            if type_ is not None:
+                type_funcs = []
+                type_funcs.extend(getattr(type_, 'constructors', []))
+                type_funcs.extend(getattr(type_, 'functions', []))
+                for f in type_funcs:
+                    if f.name == func.finish_func:
+                        self.finish_func_symbol = f.identifier
+                        break
+            else:
+                f = namespace.find_function(func.finish_func)
+                if f is not None:
+                    self.finish_func_symbol = f.identifier
+
     @property
     def c_decl(self):
         res = []
@@ -1122,12 +1202,16 @@ class TemplateFunction:
             res += [f"#define {self.identifier} ("]
         else:
             if self.return_value is None:
-                res += ["void"]
+                retval = "void"
             else:
-                res += [f"{self.return_value.type_cname}"]
+                retval = self.return_value.type_cname
+            if self.is_inline:
+                res += [f"static inline {retval}"]
+            else:
+                res += [retval]
             res += [f"{self.identifier} ("]
         n_args = len(self.arguments)
-        if n_args == 0:
+        if n_args == 0 and not self.throws:
             res += ["  void"]
         else:
             for (idx, arg) in enumerate(self.arguments):
@@ -1157,21 +1241,21 @@ class TemplateCallback:
                 filename = filename.replace('../', '')
             self.docs_location = (filename, line)
         else:
-            self.description = MISSING_DESCRIPTION
+            self.description = Markup(f"<p>{MISSING_DESCRIPTION}</p>")
 
         self.arguments = []
         for arg in cb.parameters:
-            self.arguments.append(TemplateArgument(namespace, cb, arg))
+            self.arguments.append(TemplateArgument(namespace, cb, arg, CallableType.CALLBACK))
 
         self.return_value = None
         if not isinstance(cb.return_value.target, gir.VoidType):
-            self.return_value = TemplateReturnValue(namespace, cb, cb.return_value)
+            self.return_value = TemplateReturnValue(namespace, cb, cb.return_value, CallableType.CALLBACK)
 
         self.throws = cb.throws
 
         self.stability = cb.stability
         self.attributes = cb.attributes
-        self.available_since = cb.available_since or namespace.version
+        self.available_since = cb.available_since
         if cb.deprecated:
             (version, msg) = cb.deprecated_since
             self.deprecated_since = {
@@ -1223,17 +1307,23 @@ class TemplateCallback:
 class TemplateField:
     def __init__(self, namespace, field):
         self.name = field.name
+        self.is_callback = False
+        self.is_array = False
         if field.target is not None:
             if isinstance(field.target, gir.Callback):
                 self.is_callback = True
-                self.type_name: field.target.name
+                self.type_name = field.target.name
                 self.type_cname = TemplateCallback(namespace, field.target, field=True).c_decl
+            elif isinstance(field.target, gir.ArrayType):
+                self.is_array = True
+                self.fixed_size = field.target.fixed_size
+                self.zero_terminated = field.target.zero_terminated
+                self.type_name = field.target.name
+                self.type_cname = field.target.value_type.ctype
             else:
-                self.is_callback = False
                 self.type_name = field.target.name
                 self.type_cname = field.target.ctype
         else:
-            self.is_callback = False
             self.type_name = 'none'
             self.type_cname = 'gpointer'
         self.private = field.private
@@ -1241,8 +1331,24 @@ class TemplateField:
         if field.doc is not None:
             self.description = utils.preprocess_docs(field.doc.content, namespace)
         else:
-            self.description = MISSING_DESCRIPTION
+            self.description = Markup(f"<p>{MISSING_DESCRIPTION}</p>")
         self.introspectable = field.introspectable
+
+    @property
+    def c_decl(self):
+        res = ""
+        if self.is_callback:
+            res = f"{self.type_cname};"
+        elif self.is_array:
+            if self.fixed_size > 0:
+                res = f"{self.type_cname} {self.name}[{self.fixed_size}]"
+            else:
+                res = f"{self.type_cname} {self.name}[]"
+        elif self.bits > 0:
+            res = f"{self.type_cname} {self.name} : {self.bits}"
+        else:
+            res = f"{self.type_cname} {self.name}"
+        return res
 
 
 class TemplateInterface:
@@ -1264,7 +1370,7 @@ class TemplateInterface:
             self.fqtn = f"{self.namespace}.{self.name}"
             self.requires = "GObject.Object"
             self.link_prefix = "iface"
-            self.description = MISSING_DESCRIPTION
+            self.description = Markup(f"<p>{MISSING_DESCRIPTION}</p>")
             return
 
         md = markdown.Markdown(extensions=utils.MD_EXTENSIONS,
@@ -1311,11 +1417,11 @@ class TemplateInterface:
                 filename = filename.replace('../', '')
             self.docs_location = (filename, line)
         else:
-            self.description = MISSING_DESCRIPTION
+            self.description = Markup(f"<p>{MISSING_DESCRIPTION}</p>")
 
         self.stability = interface.stability
         self.attributes = interface.attributes
-        self.available_since = interface.available_since or namespace.version
+        self.available_since = interface.available_since
         if interface.deprecated:
             (version, msg) = interface.deprecated_since
             self.deprecated_since = {
@@ -1334,7 +1440,7 @@ class TemplateInterface:
             if self.class_struct.doc:
                 self.class_description = utils.preprocess_docs(self.class_struct.doc.content, namespace, md=md)
             else:
-                self.class_description = MISSING_DESCRIPTION
+                self.class_description = Markup(f"<p>{MISSING_DESCRIPTION}</p>")
             self.class_fields = []
             for field in self.class_struct.fields:
                 if not field.private:
@@ -1467,11 +1573,11 @@ class TemplateClass:
                 filename = filename.replace('../', '')
             self.docs_location = (filename, line)
         else:
-            self.description = MISSING_DESCRIPTION
+            self.description = Markup(f"<p>{MISSING_DESCRIPTION}</p>")
 
         self.stability = cls.stability
         self.attributes = cls.attributes
-        self.available_since = cls.available_since or namespace.version
+        self.available_since = cls.available_since
         if cls.deprecated:
             (version, msg) = cls.deprecated_since
             self.deprecated_since = {
@@ -1519,7 +1625,7 @@ class TemplateClass:
             if self.class_struct.doc:
                 self.class_description = utils.preprocess_docs(self.class_struct.doc.content, namespace, md=md)
             else:
-                self.class_description = MISSING_DESCRIPTION
+                self.class_description = Markup(f"<p>{MISSING_DESCRIPTION}</p>")
             self.class_fields = []
             for field in self.class_struct.fields:
                 if not field.private:
@@ -1602,9 +1708,9 @@ class TemplateClass:
         if n_fields > 0:
             for (idx, field) in enumerate(self.fields):
                 if idx < n_fields - 1:
-                    res += [f"  {field.name}: {field.type_cname},"]
+                    res += [f"  {field.c_decl},"]
                 else:
-                    res += [f"  {field.name}: {field.type_cname}"]
+                    res += [f"  {field.c_decl}"]
         else:
             res += ["  /* No available fields */"]
         res += ["}"]
@@ -1689,11 +1795,11 @@ class TemplateRecord:
                 filename = filename.replace('../', '')
             self.docs_location = (filename, line)
         else:
-            self.description = MISSING_DESCRIPTION
+            self.description = Markup(f"<p>{MISSING_DESCRIPTION}</p>")
 
         self.stability = record.stability
         self.attributes = record.attributes
-        self.available_since = record.available_since or namespace.version
+        self.available_since = record.available_since
         if record.deprecated:
             (version, msg) = record.deprecated_since
             self.deprecated_since = {
@@ -1734,12 +1840,7 @@ class TemplateRecord:
         n_fields = len(self.fields)
         if n_fields > 0:
             for field in self.fields:
-                if field.is_callback:
-                    res += [f"  {field.type_cname};"]
-                elif field.bits > 0:
-                    res += [f"  {field.type_cname} {field.name} : {field.bits};"]
-                else:
-                    res += [f"  {field.type_cname} {field.name};"]
+                res += [f"  {field.c_decl};"]
         else:
             res += ["  /* No available fields */"]
         res += ["}"]
@@ -1768,11 +1869,11 @@ class TemplateUnion:
                 filename = filename.replace('../', '')
             self.docs_location = (filename, line)
         else:
-            self.description = MISSING_DESCRIPTION
+            self.description = Markup(f"<p>{MISSING_DESCRIPTION}</p>")
 
         self.stability = union.stability
         self.attributes = union.attributes
-        self.available_since = union.available_since or namespace.version
+        self.available_since = union.available_since
         if union.deprecated:
             (version, msg) = union.deprecated_since
             self.deprecated_since = {
@@ -1813,10 +1914,7 @@ class TemplateUnion:
         n_fields = len(self.fields)
         if n_fields > 0:
             for field in self.fields:
-                if field.is_callback:
-                    res += [f"  {field.type_cname};"]
-                else:
-                    res += [f"  {field.type_cname} {field.name};"]
+                res += [f"  {field.c_decl};"]
         else:
             res += ["  /* No available fields */"]
         res += ["}"]
@@ -1845,11 +1943,11 @@ class TemplateAlias:
                 filename = filename.replace('../', '')
             self.docs_location = (filename, line)
         else:
-            self.description = MISSING_DESCRIPTION
+            self.description = Markup(f"<p>{MISSING_DESCRIPTION}</p>")
 
         self.stability = alias.stability
         self.attributes = alias.attributes
-        self.available_since = alias.available_since or namespace.version
+        self.available_since = alias.available_since
         if alias.deprecated:
             (version, msg) = alias.deprecated_since
             self.deprecated_since = {
@@ -1881,7 +1979,7 @@ class TemplateMember:
                 filename = filename.replace('../', '')
             self.docs_location = (filename, line)
         else:
-            self.description = MISSING_DESCRIPTION
+            self.description = Markup(f"<p>{MISSING_DESCRIPTION}</p>")
 
 
 class TemplateEnum:
@@ -1908,11 +2006,11 @@ class TemplateEnum:
                 filename = filename.replace('../', '')
             self.docs_location = (filename, line)
         else:
-            self.description = MISSING_DESCRIPTION
+            self.description = Markup(f"<p>{MISSING_DESCRIPTION}</p>")
 
         self.stability = enum.stability
         self.attributes = enum.attributes
-        self.available_since = enum.available_since or namespace.version
+        self.available_since = enum.available_since
         if enum.deprecated:
             (version, msg) = enum.deprecated_since
             self.deprecated_since = {
@@ -2760,6 +2858,9 @@ def gen_types_hierarchy(config, theme_config, output_dir, jinja_env, repository)
     # All GTypeInstance sub-types
     typed_tree = repository.get_class_hierarchy()
 
+    if len(objects_tree) == 0 and len(typed_tree) == 0:
+        return None
+
     res = ["<h1>Classes Hierarchy</h1>"]
 
     def dump_tree(node, out):
@@ -3065,7 +3166,9 @@ def gen_reference(config, options, repository, templates_dir, theme_config, cont
 
     content_files = gen_content_files(config, theme_config, content_dirs, ns_dir, jinja_env, namespace)
     content_images = gen_content_images(config, content_dirs, ns_dir)
-    content_files.append(gen_types_hierarchy(config, theme_config, ns_dir, jinja_env, repository))
+    types_hierarchy = gen_types_hierarchy(config, theme_config, ns_dir, jinja_env, repository)
+    if types_hierarchy:
+        content_files.append(types_hierarchy)
 
     if options.sections == [] or options.sections == ["all"]:
         gen_indices = list(all_indices.keys())

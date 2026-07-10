@@ -83,12 +83,12 @@
         <p>Available since: {{ vfunc.available_since }}</p>
         {%- endif %}
         {% if vfunc.deprecated_since -%}
-        <div>
+        <div class="admonition deprecation">
+          <p class="admonition-title">Deprecated since: {{ vfunc.deprecated_since.version }}</p>
           {%- if vfunc.deprecated_since.message -%}
-          <p>Deprecated since: {{ vfunc.deprecated_since.version }}</p>
           {{ vfunc.deprecated_since.message }}
           {%- else -%}
-          <p>Deprecated since: {{ vfunc.deprecated_since.version }}. Do not use in newly written code</p>
+          <p>Do not use in newly written code.</p>
           {%- endif -%}
         </div>
         {%- endif %}
@@ -126,7 +126,7 @@
             <code>{{ arg.type_cname }}</code>
             {%- endif -%}
             </p>
-            <p>{{ arg.description|safe }}</p>
+            {{ arg.description|safe }}
             <table>
             {% if arg.direction != "in" %}<tr><td title="direction: {{ arg.direction}}">{{ arg.direction_note }}</td></tr>{% endif %}
             {% if arg.direction == "in" and arg.is_pointer and arg.nullable %}<tr><td>The argument can be <code>NULL</code>.</td></tr>{% endif %}
@@ -179,7 +179,7 @@
             <code>{{ vfunc.return_value.type_cname }}</code>
             {%- endif -%}
             </p>
-            <p>{{ vfunc.return_value.description|safe }}</p>
+            {{ vfunc.return_value.description|safe }}
           </div>
           <div>
             <table>

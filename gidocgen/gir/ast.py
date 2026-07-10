@@ -8,7 +8,9 @@ from .. import log
 
 class Doc:
     """A documentation node, pointing to the source code"""
-    def __init__(self, content: str, filename: str, line: int, version: str = None, stability: str = None):
+    def __init__(self, content: str, filename: str, line: int,
+                 version: T.Optional[str] = None,
+                 stability: T.Optional[str] = None):
         self.content = content
         self.filename = filename
         self.line = line
@@ -38,7 +40,7 @@ class Attribute:
 
 class Include:
     """A GIR include"""
-    def __init__(self, name: str, version: str = None):
+    def __init__(self, name: str, version: T.Optional[str] = None):
         self.name = name
         self.version = version
 
@@ -56,8 +58,8 @@ class Include:
 class Info:
     """Base information for most types"""
     def __init__(self, introspectable: bool = True, deprecated: T.Optional[str] = None,
-                 deprecated_version: T.Optional[str] = None, version: str = None,
-                 stability: str = None):
+                 deprecated_version: T.Optional[str] = None, version: T.Optional[str] = None,
+                 stability: T.Optional[str] = None):
         self.introspectable = introspectable
         self.deprecated_msg = deprecated
         self.deprecated_version = deprecated_version
@@ -120,7 +122,8 @@ class GIRElement:
             return None
         return self.info.source_position.filename, self.info.source_position.line
 
-    def set_deprecated(self, doc: T.Optional[str] = None, since_version: T.Optional[str] = None) -> None:
+    def set_deprecated(self, doc: T.Optional[str] = None,
+                       since_version: T.Optional[str] = None) -> None:
         """Set the deprecation annotations for the element"""
         self.info.deprecated_msg = doc
         self.info.deprecated_version = since_version
@@ -221,7 +224,7 @@ class ArrayType(GIRElement):
 
 class ListType(GIRElement):
     """Type class for List nodes"""
-    def __init__(self, name: str, value_type: Type, ctype: str = None):
+    def __init__(self, name: str, value_type: Type, ctype: T.Optional[str] = None):
         super().__init__(name)
         self.ctype = ctype
         self.value_type = value_type
@@ -230,7 +233,7 @@ class ListType(GIRElement):
 
 class MapType(GIRElement):
     """Type class for Map nodes"""
-    def __init__(self, name: str, key_type: Type, value_type: Type, ctype: str = None):
+    def __init__(self, name: str, key_type: Type, value_type: Type, ctype: T.Optional[str] = None):
         super().__init__(name)
         self.ctype = ctype
         self.key_type = key_type
@@ -279,9 +282,9 @@ class Constant(Type):
 
 class Parameter(GIRElement):
     """A callable parameter"""
-    def __init__(self, name: str, direction: str, transfer: str, target: Type = None, caller_allocates: bool = False,
+    def __init__(self, name: str, direction: str, transfer: str, target: T.Optional[Type] = None, caller_allocates: bool = False,
                  optional: bool = False, nullable: bool = False, closure: int = -1, destroy: int = -1,
-                 scope: str = None):
+                 scope: T.Optional[str] = None):
         super().__init__(name)
         self.direction = direction
         self.transfer = transfer
@@ -299,7 +302,9 @@ class Parameter(GIRElement):
 
 class ReturnValue(GIRElement):
     """A callable's return value"""
-    def __init__(self, transfer: str, target: Type, nullable: bool = False, closure: int = -1, destroy: int = -1, scope: str = None):
+    def __init__(self, transfer: str, target: Type, nullable: bool = False,
+                 closure: int = -1, destroy: int = -1,
+                 scope: T.Optional[str] = None):
         super().__init__()
         self.transfer = transfer
         self.nullable = nullable
@@ -314,15 +319,20 @@ class ReturnValue(GIRElement):
 
 class Callable(GIRElement):
     """A callable symbol: function, method, function-macro, ..."""
-    def __init__(self, name: str, namespace: T.Optional[str], identifier: T.Optional[str], throws: bool = False):
+    def __init__(self, name: str, namespace: T.Optional[str], identifier: T.Optional[str], throws: bool = False,
+                 inline: bool = False):
         super().__init__(name=name, namespace=namespace)
         self.identifier = identifier
         self.parameters: T.List[Parameter] = []
         self.return_value: T.Optional[ReturnValue] = None
         self.throws: bool = throws
+        self.inline: bool = inline
         self.moved_to: T.Optional[str] = None
         self.shadows: T.Optional[str] = None
         self.shadowed_by: T.Optional[str] = None
+        self.async_func: T.Optional[str] = None
+        self.sync_func: T.Optional[str] = None
+        self.finish_func: T.Optioal[str] = None
 
     def add_parameter(self, param: Parameter) -> None:
         self.parameters.append(param)
@@ -342,6 +352,15 @@ class Callable(GIRElement):
     def set_moved_to(self, func: str) -> None:
         self.moved_to = func
 
+    def set_async_func(self, func: T.Optional[str]) -> None:
+        self.async_func = func
+
+    def set_sync_func(self, func: T.Optional[str]) -> None:
+        self.sync_func = func
+
+    def set_finish_func(self, func: T.Optional[str]) -> None:
+        self.finish_func = func
+
     def __contains__(self, param):
         if isinstance(param, str):
             for p in self.parameters:
@@ -360,14 +379,16 @@ class FunctionMacro(Callable):
 
 
 class Function(Callable):
-    def __init__(self, name: str, namespace: T.Optional[str], identifier: str, throws: bool = False):
-        super().__init__(name, namespace, identifier, throws)
+    def __init__(self, name: str, namespace: T.Optional[str], identifier: str, throws: bool = False,
+                 inline: bool = False):
+        super().__init__(name, namespace, identifier, throws, inline)
 
 
 class Method(Callable):
     def __init__(self, name: str, identifier: str, instance_param: Parameter, throws: bool = False,
-                 set_property: T.Optional[str] = None, get_property: T.Optional[str] = None):
-        super().__init__(name, None, identifier, throws)
+                 set_property: T.Optional[str] = None, get_property: T.Optional[str] = None,
+                 inline: bool = False):
+        super().__init__(name, None, identifier, throws, inline)
         self.instance_param = instance_param
         self.set_property = set_property
         self.get_property = get_property
@@ -379,10 +400,12 @@ class Method(Callable):
 
 
 class VirtualMethod(Callable):
-    def __init__(self, name: str, identifier: str, invoker: str, instance_param: Parameter, throws: bool = False):
+    def __init__(self, name: str, identifier: str, invoker: str, instance_param: T.Optional[Parameter],
+                 static: bool = False, throws: bool = False):
         super().__init__(name, None, identifier, throws)
         self.instance_param = instance_param
         self.invoker = invoker
+        self.static = static
 
     def __contains__(self, param):
         if isinstance(param, Parameter) and param == self.instance_param:

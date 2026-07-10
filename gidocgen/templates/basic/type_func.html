@@ -82,23 +82,26 @@
         <p>Available since: {{ type_func.available_since }}</p>
         {%- endif %}
         {% if type_func.deprecated_since -%}
-        <div>
+        <div class="admonition deprecation">
+          <p class="admonition-title">Deprecated since: {{ type_func.deprecated_since.version }}</p>
           {%- if type_func.deprecated_since.message -%}
-          <p>Deprecated since: {{ type_func.deprecated_since.version }}</p>
           {{ type_func.deprecated_since.message }}
           {%- else -%}
-          <p>Deprecated since: {{ type_func.deprecated_since.version }}. Do not use in newly written code</p>
+          <p>Do not use in newly written code.</p>
           {%- endif -%}
         </div>
+        {%- endif %}
+        {% if type_func.finish_func -%}
+        <p>This function completes asynchronously. Use <a href="type_func.{{class.name}}.{{type_func.finish_func}}.html"><code>{{type_func.finish_func_symbol}}()</code></a> inside the <code>GAsyncReadyCallback</code> to obtain the result of the operation.</p>
         {%- endif %}
         {% if not type_func.introspectable -%}
         <p>This function is not directly available to language bindings.</p>
         {%- endif %}
         {% if type_func.shadows -%}
-        <p>This method is renamed to <a href="type_func.{{class.name}}.{{type_func.shadows}}.html"><code>{{type_func.shadows_symbol}}()</code></a> in language bindings</p>
+        <p>This function is renamed to <a href="type_func.{{class.name}}.{{type_func.shadows}}.html"><code>{{type_func.shadows_symbol}}()</code></a> in language bindings.</p>
         {%- endif %}
         {% if type_func.shadowed_by -%}
-        <p>The implementation of this method is provided by <a href="type_func.{{class.name}}.{{type_func.shadowed_by}}.html"><code>{{type_func.shadowed_by_symbol}}()</code></a> in language bindings</p>
+        <p>The implementation of this function is provided by <a href="type_func.{{class.name}}.{{type_func.shadowed_by}}.html"><code>{{type_func.shadowed_by_symbol}}()</code></a> in language bindings.</p>
         {%- endif %}
       </div>
 
@@ -134,7 +137,7 @@
             <code>{{ arg.type_cname }}</code>
             {%- endif -%}
             </p>
-            <p>{{ arg.description|safe }}</p>
+            {{ arg.description|safe }}
             <table>
             {% if arg.direction != "in" %}<tr><td title="direction: {{ arg.direction}}">{{ arg.direction_note }}</td></tr>{% endif %}
             {% if arg.direction == "in" and arg.is_pointer and arg.nullable %}<tr><td>The argument can be <code>NULL</code>.</td></tr>{% endif %}
@@ -187,7 +190,7 @@
             <code>{{ type_func.return_value.type_cname }}</code>
             {%- endif -%}
             </p>
-            <p>{{ type_func.return_value.description|safe }}</p>
+            {{ type_func.return_value.description|safe }}
           </div>
           <div>
             <table>

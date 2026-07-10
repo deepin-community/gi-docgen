@@ -45,13 +45,27 @@ SPDX-License-Identifier: {{ CONFIG.license }}
   {% block style_other %}{% endblock %}
 
   {% if CONFIG.urlmap_file %}
-  <script src="{{ CONFIG.urlmap_file }}"></script>
+  <script src="{{ CONFIG.urlmap_basename }}"></script>
   {% endif %}
   {% if CONFIG.search_index %}
   <script src="fzy.js"></script>
   <script src="search.js"></script>
   {% endif %}
   <script src="main.js"></script>
+
+  {% for f in CONFIG.favicons %}
+    {% if f.endswith("180x180.png") %}
+  <link rel="apple-touch-icon" sizes="180x180" href="{{ f }}">
+    {% elif f.endswith("192x192.png") %}
+  <link rel="icon" sizes="192x192" href="{{ f }}">
+    {% elif f.endswith("128x128.png") %}
+  <link rel="icon" sizes="128x128" href="{{ f }}">
+    {% elif f.endswith("32x32.png") %}
+  <link rel="icon" sizes="32x32" href="{{ f }}">
+    {% else %}
+  <link rel="icon" href="{{ f }}">
+    {% endif %}
+  {% endfor %}
 </head>
 
 <body>
@@ -60,7 +74,7 @@ SPDX-License-Identifier: {{ CONFIG.license }}
     <nav class="sidebar devhelp-hidden">
       {% if CONFIG.logo_url %}
       <div class="section">
-        <img src="{{ CONFIG.logo_url }}" class="logo"/>
+        <a href="index.html"><img src="{{ CONFIG.logo_url }}" class="logo"/></a>
       </div>
       {% endif %}
       {% if CONFIG.search_index %}

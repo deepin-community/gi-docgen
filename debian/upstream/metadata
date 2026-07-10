@@ -1,7 +1,8 @@
+---
 Archive: GNOME
 Bug-Database: https://gitlab.gnome.org/GNOME/gi-docgen/-/issues
 Bug-Submit: https://gitlab.gnome.org/GNOME/gi-docgen/-/issues/new
-Changelog: https://gitlab.gnome.org/GNOME/gi-docgen/commits/master
+Changelog: https://gitlab.gnome.org/GNOME/gi-docgen/commits/main
 Repository-Browse: https://gitlab.gnome.org/GNOME/gi-docgen
 Repository: https://gitlab.gnome.org/GNOME/gi-docgen.git
 

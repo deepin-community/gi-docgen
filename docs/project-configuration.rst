@@ -148,6 +148,10 @@ The following keys are used, if found:
   ``--content-dir`` command line arguments. The files will be copied
   in the root directory of the namespace.
 
+  Any image whose filename starts with ``favicon`` will be used as a favicon.
+  Icons whose name ends in ``{size}x{size}.png`` for sizes in 32, 128, 180
+  (iOS), and 192 (Android) will be special cased.
+
 ``content_base_url`` = ``s``
   The base URL for accessing a content file in the source code repository.
   The final URL will use the base name of the content file. You can use
@@ -168,6 +172,17 @@ The following keys are used, if found:
       [ 'PangoCairo', 'https://gnome.pages.gitlab.gnome.org/pango/PangoCairo/' ],
     ]
 
+The ``check`` section
+~~~~~~~~~~~~~~~~~~~~~
+
+The ``check`` section is used to define the behavior of the ``gi-docgen check``
+command.
+
+The following keys are used, if found:
+
+``ignore_deprecated`` = ``b``
+  A boolean value that controls whether to skip deprecated types and symbols
+  when checking documentation blocks. It is set to ``false`` by default.
 
 Symbol overrides
 ----------------

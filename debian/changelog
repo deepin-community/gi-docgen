@@ -1,8 +1,28 @@
-gi-docgen (2023.3+ds-1deepin1) unstable; urgency=medium
+gi-docgen (2025.3-1) unstable; urgency=medium
 
-  * Fix CVE-2025-11687: DOM XSS via unescaped query string in search
+  * New upstream release
+  * debian/watch: Switch back to watching download.gnome.org for releases
 
- -- deepin-ci-robot <packages@deepin.org>  Mon, 27 Apr 2026 19:55:11 +0800
+ -- Jeremy Bícha <jbicha@ubuntu.com>  Fri, 28 Feb 2025 16:18:54 -0500
+
+gi-docgen (2024.1+ds-2) unstable; urgency=medium
+
+  [ Simon McVittie ]
+  * d/watch: Look for either gi-docgen or gi_docgen
+
+  [ Jeremy Bícha ]
+  * Run wrap-and-sort
+  * Update debian/upstream/metadata
+
+ -- Jeremy Bícha <jbicha@ubuntu.com>  Wed, 22 Jan 2025 08:29:58 -0500
+
+gi-docgen (2024.1+ds-1) unstable; urgency=medium
+
+  * New upstream release
+  * Stop using dh-sequence-gnome
+  * Bump Standards Version to 4.7.0
+
+ -- Jeremy Bícha <jbicha@ubuntu.com>  Wed, 14 Aug 2024 11:57:21 -0400
 
 gi-docgen (2023.3+ds-1) unstable; urgency=medium
 

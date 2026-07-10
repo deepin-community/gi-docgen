@@ -26,6 +26,12 @@ For instance:
      */
 
     /**
+     * ExampleFoo::bar-changed:
+     *
+     * Emitted when the [bar instance][struct@Example.Bar] changes.
+     /
+
+    /**
      * ExampleFoo:bar:
      *
      * Sets an instance of [`Bar`](struct.Bar.html) on `Foo`.
@@ -35,6 +41,10 @@ For instance:
 will all link to ``Bar``.
 
 Backticks will be stripped, so ``[`class@Foo`]`` will correctly link to ``Foo``.
+
+Fragment identifiers can be included to link to anchors in the target page:
+``[class@Foo#some-subheading]``. All subheadings in gi-docgen generated pages
+have an automatically generated anchor.
 
 The link can either be a fully qualified name, which includes the namespace; or
 a name relative to the current namespace; for instance, both of the following links
@@ -76,16 +86,16 @@ The available qualifier fragments are:
      - ``[ctor@Gtk.Box.new]``, ``[ctor@Button.new_with_label]``
    * - ``enum``
      - ``TypeName``
-     - A plain enumeration
-     - ``[enum@Orientation]``
+     - A plain enumeration or member
+     - ``[enum@Orientation]``, ``[enum@Orientation.HORIZONTAL]``
    * - ``error``
      - ``TypeName``
-     - A ``GError`` domain enumeration
-     - ``[error@Gtk.BuilderParseError]``
+     - A ``GError`` domain enumeration or member
+     - ``[error@Gtk.BuilderParseError]``, ``[error@Gtk.FileChooserError.NONEXISTENT]``
    * - ``flags``
      - ``TypeName``
-     - A bitfield
-     - ``[flags@Gdk.ModifierType]``
+     - A bitfield or member
+     - ``[flags@Gdk.ModifierType]``, ``[flags@Gdk.ModifierType.SHIFT_MASK]``
    * - ``func``
      - ``function``, ``TypeName.function``
      - A global or a type function
@@ -205,5 +215,5 @@ done by defining a JavaScript map called ``baseURLs`` like this:
       [ 'PangoCairo', 'https://gnome.pages.gitlab.gnome.org/pango/PangoCairo/' ],
     ]
 
-And specifying the path of the JavaScript file into the ``extras`` section
+And specifying the path of the JavaScript file into the ``extra`` section
 of the project configuration, in the ``urlmap_file`` key.

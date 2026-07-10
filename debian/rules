@@ -1,5 +1,4 @@
 #!/usr/bin/make -f
--include /usr/share/gnome-pkg-tools/1/rules/gnome-get-source.mk
 
 export LC_ALL=C.UTF-8
 unexport LANGUAGE LANG LC_ALL LC_CTYPE LC_COLLATE LC_TIME LC_NUMERIC LC_MESSAGES
@@ -15,14 +14,7 @@ override_dh_auto_configure:
 		-Ddevelopment_tests=false \
 		$(NULL)
 
-override_dh_auto_build:
-	dh_auto_build
+execute_after_dh_auto_build:
 ifneq ($(filter gi-docgen-doc,$(built_binaries)),)
 	python3 -m sphinx -b html docs debian/html
 endif
-
-override_dh_gnome:
-	dh_gnome --no-gnome-versions
-
-override_dh_gnome_clean:
-	dh_gnome_clean --no-control

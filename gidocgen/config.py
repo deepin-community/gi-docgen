@@ -46,6 +46,7 @@ class TomlConfig:
 class GIDocConfig:
     """Load and represent the configuration for gidocgen"""
     def __init__(self, config_file=None):
+        self._favicons = []
         self._config_file = config_file
 
         self._config = {}
@@ -64,6 +65,10 @@ class GIDocConfig:
     @property
     def theme(self):
         return self._config.get('theme', {})
+
+    @property
+    def check(self):
+        return self._config.get('check', {})
 
     def get_templates_dir(self, default=None):
         return self.theme.get('templates_dir', default)
@@ -86,6 +91,12 @@ class GIDocConfig:
     @property
     def urlmap_file(self):
         return self.extra.get('urlmap_file')
+
+    @property
+    def urlmap_basename(self):
+        if self.urlmap_file is not None:
+            return os.path.basename(self.urlmap_file)
+        return None
 
     @property
     def version(self):
@@ -258,6 +269,21 @@ class GIDocConfig:
     @property
     def generator(self):
         return f"{core.version}"
+
+    @property
+    def favicons(self):
+        if not self._favicons:
+            self._favicons = [
+                os.path.basename(p)
+                for p in self.content_images
+                if os.path.basename(p).startswith('favicon')
+            ]
+
+        return self._favicons
+
+    @property
+    def ignore_deprecated(self):
+        return self.check.get('ignore_deprecated', False)
 
 
 class GITemplateConfig:

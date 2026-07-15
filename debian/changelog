@@ -1,3 +1,9 @@
+gi-docgen (2025.3-1deepin1) unstable; urgency=medium
+
+  * backport: Fix CVE-2025-11687 - DOM XSS via unescaped query string in search
+
+ -- lichenggang <lichenggang@deepin.org>  Wed, 15 Jul 2026 13:16:26 +0800
+
 gi-docgen (2025.3-1) unstable; urgency=medium
 
   * New upstream release
